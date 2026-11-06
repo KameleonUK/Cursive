@@ -4,7 +4,8 @@ end
 
 local L = AceLibrary("AceLocale-2.2"):new("Cursive")
 Cursive:RegisterDB("CursiveDB")
-Cursive:RegisterDefaults("profile", {
+-- kept on Cursive so the AddOn Options pages (optionspanel.lua) can reset a setting to its default
+Cursive.defaults = {
 	caption = L["Cursive"],
 	anchor = "CENTER",
 	x = -240,
@@ -55,10 +56,13 @@ Cursive:RegisterDefaults("profile", {
 	filterhascurse = false,
 	filterignored = true,
 	filteruntagged = false,
+	filterplayer = false,
+	filternotplayer = false,
 
 	ignorelist = {},
 	ignorelistuseregex = false,
-})
+}
+Cursive:RegisterDefaults("profile", Cursive.defaults)
 
 local function splitIgnoreString(str, delimiter)
 	local result = {}
@@ -77,6 +81,25 @@ local function splitIgnoreString(str, delimiter)
 		table.insert(result, token)
 	end
 	return result
+end
+
+-- the ignored mobs list as typed ("whelp,scarab"), shared by the minimap menu and the AddOn Options page
+function Cursive:GetIgnoreListText()
+	local list = Cursive.db.profile.ignorelist
+	if list and table.getn(list) > 0 then
+		return table.concat(list, ",")
+	end
+	return ""
+end
+
+function Cursive:SetIgnoreListText(text)
+	if not text or text == "" then
+		Cursive.db.profile.ignorelist = {}
+	else
+		Cursive.db.profile.ignorelist = splitIgnoreString(text, ",")
+	end
+	-- check for common lua regex patterns
+	Cursive.db.profile.ignorelistuseregex = text and string.find(text, "[*+%%?]") ~= nil or false
 end
 
 local barOptions = {
@@ -496,19 +519,10 @@ local mobFilters = {
 		usage = "whelp, black dragonkin, player3",
 		order = 69,
 		get = function()
-			if Cursive.db.profile.ignorelist and table.getn(Cursive.db.profile.ignorelist) > 0 then
-				return table.concat(Cursive.db.profile.ignorelist, ",") or ""
-			end
-			return ""
+			return Cursive:GetIgnoreListText()
 		end,
 		set = function(v)
-			if not v or v == "" then
-				Cursive.db.profile.ignorelist = {}
-			else
-				Cursive.db.profile.ignorelist = splitIgnoreString(v, ",");
-			end
-			-- check for common lua regex patterns
-			Cursive.db.profile.ignorelistuseregex = v and string.find(v, "[*+%%?]") ~= nil or false
+			Cursive:SetIgnoreListText(v)
 		end,
 	},
 }
@@ -724,3 +738,13 @@ for k, v in pairs(args) do
 	end
 end
 -- XXX end hack
+
+-- Left-click the minimap / FuBar icon: the AddOn Options pages (optionspanel.lua).
+-- Right-click still opens this Dewdrop menu (FuBarPlugin does that itself).
+function CursiveOptions:OnClick()
+	Cursive:OpenOptionsPanel()
+end
+
+function CursiveOptions:OnTooltipUpdate()
+	AceLibrary("Tablet-2.0"):SetHint("Left-click to open the options. Right-click for the quick menu.")
+end

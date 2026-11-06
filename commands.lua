@@ -100,23 +100,40 @@ local function parseOptions(optionsStr)
 	return options
 end
 
-local function handleSlashCommands(msg, editbox)
-	if not msg or msg == "" then
-		DEFAULT_CHAT_FRAME:AddMessage(curseCommands)
-		for _, description in pairs(commands) do
-			DEFAULT_CHAT_FRAME:AddMessage(description)
-		end
-		DEFAULT_CHAT_FRAME:AddMessage(priorityChoices)
-		for priority, description in pairs(priorities) do
-			DEFAULT_CHAT_FRAME:AddMessage("|CFFFFFF00" .. priority .. "|R: " .. description)
-		end
+local function printHelp()
+	DEFAULT_CHAT_FRAME:AddMessage(curseCommands)
+	for _, description in pairs(commands) do
+		DEFAULT_CHAT_FRAME:AddMessage(description)
+	end
+	DEFAULT_CHAT_FRAME:AddMessage(priorityChoices)
+	for priority, description in pairs(priorities) do
+		DEFAULT_CHAT_FRAME:AddMessage("|CFFFFFF00" .. priority .. "|R: " .. description)
+	end
 
-		DEFAULT_CHAT_FRAME:AddMessage(curseOptions)
-		for option, description in pairs(commandOptions) do
-			DEFAULT_CHAT_FRAME:AddMessage("|CFFFFFF00" .. option .. "|R: " .. description)
+	DEFAULT_CHAT_FRAME:AddMessage(curseOptions)
+	for option, description in pairs(commandOptions) do
+		DEFAULT_CHAT_FRAME:AddMessage("|CFFFFFF00" .. option .. "|R: " .. description)
+	end
+end
+
+-- /cursive opens the options (Game Menu > AddOn Options > Cursive), /cursive help lists the
+-- commands, and curse / multicurse / target cast. Settings have no subcommands.
+local function handleSlashCommands(msg, editbox)
+	local _, _, word = string.find(msg or "", "^%s*(%S*)")
+	word = string.lower(word or "")
+
+	if word == "" then
+		if Cursive.optionsRoot then
+			Cursive:OpenOptionsPanel()
+		else
+			printHelp() -- the options pages failed to build; BugSack has the error
 		end
 		return
+	elseif word == "help" then
+		printHelp()
+		return
 	end
+
 	-- get first word in string
 	local _, _, command, args = string.find(msg, "(%w+) (.*)")
 	if command == "curse" then
@@ -132,11 +149,9 @@ local function handleSlashCommands(msg, editbox)
 		local options = parseOptions(optionsStr)
 		Cursive:Target(spellName, priority, options)
 	else
-		DEFAULT_CHAT_FRAME:AddMessage(L["|cffffcc00Cursive:|cffffaaaa Unknown command."])
-		DEFAULT_CHAT_FRAME:AddMessage(curseCommands)
-		for _, description in pairs(commands) do
-			DEFAULT_CHAT_FRAME:AddMessage(description)
-		end
+		DEFAULT_CHAT_FRAME:AddMessage(L["|cffffcc00Cursive:|cffffaaaa Unknown command."]
+			.. " Settings are in Game Menu > AddOn Options > Cursive; type /cursive to open them."
+			.. " Commands: /cursive help, curse, multicurse, target.")
 	end
 end
 

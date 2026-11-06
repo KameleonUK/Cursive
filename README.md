@@ -17,9 +17,15 @@ Move the Cursive label to the desired position on the screen. You can turn on 'S
 help with this. Once you have it where you want it, turn off 'Show Frame Background' and turn on 'Allow clickthrough'
 so that it doesn't block your clicks when it's not displaying mobs.
 
+## Settings
+
+Settings are in Game Menu > AddOn Options > Cursive, with pages for Bars, Mob Filters and Shared Debuffs. To open
+them, type `/cursive` or left-click the minimap icon. Right-clicking the minimap icon opens the quick menu with the same
+settings.
+
 ## Commands
 
-`/cursive` for commands, minimap icon to edit options.
+`/cursive help` lists the commands, priorities and options below.
 
 ### Curse
 
@@ -230,6 +236,8 @@ and stays off.
     Cursive's own calculation.
   - New: other players' Faerie Fire shows its real time left, and a resisted refresh no longer restarts it.
   - New: Malediction setting in the options menu, used when a command has no `malediction=` option.
+  - New: settings pages in Game Menu > AddOn Options > Cursive. `/cursive` and a left click on the minimap icon open
+    them, and `/cursive help` lists the commands. Right-clicking the minimap icon still opens the quick menu.
   - Crowd control, `ignorespellid` and `ignorespelltexture` checks also see debuffs Turtle moves into buff slots.
 - **3.2.0**
   - Fixed: Shackle Undead is treated as crowd control again, so commands don't break a priest's shackle.

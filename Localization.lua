@@ -36,7 +36,7 @@ L:RegisterTranslations("enUS", function()
 
 
 		-- global
-		["|cffffcc00Cursive:|cffffaaaa Loaded.  /cursive for commands and minimap icon for options."] = true,
+		["|cffffcc00Cursive:|cffffaaaa Loaded.  /cursive opens the options, /cursive help lists the commands."] = true,
 
 
 		-- settings
@@ -241,7 +241,7 @@ L:RegisterTranslations("zhCN", function()
 
 
 		-- global
-		["|cffffcc00Cursive:|cffffaaaa Loaded.  /cursive for commands and minimap icon for options."] = "|cffffcc00Cursive:|cffffaaaa 已加载。/cursive 用于查看帮助命令，小地图图标打开设置选项.",
+		["|cffffcc00Cursive:|cffffaaaa Loaded.  /cursive opens the options, /cursive help lists the commands."] = "|cffffcc00Cursive:|cffffaaaa 已加载。/cursive 打开设置，/cursive help 查看帮助命令.",
 
 		-- settings
 		["Cursive"] = "Cursive",

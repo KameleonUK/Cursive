@@ -15,6 +15,8 @@ local REQUIRED = {
 	'C_UnitAuras.GetUnitAuraBySpellID',
 	'C_UnitAuras.GetUnitAuras',
 	'GetInventoryItemID',
+	'InterfaceOptions_AddCategory',
+	'InterfaceOptionsFrame_OpenToCategory',
 }
 
 local function resolve(path)

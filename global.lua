@@ -56,10 +56,17 @@ function Cursive:OnEnable()
 	SetCVar("NP_EnableSpellGoEvents", 1)
 	SetCVar("NP_EnableUnitEventsGuid", 1)
 
-	DEFAULT_CHAT_FRAME:AddMessage(L["|cffffcc00Cursive:|cffffaaaa Loaded.  /cursive for commands and minimap icon for options."])
+	DEFAULT_CHAT_FRAME:AddMessage(L["|cffffcc00Cursive:|cffffaaaa Loaded.  /cursive opens the options, /cursive help lists the commands."])
 
 	Cursive.curses:LoadCurses()
 	if Cursive.db.profile.enabled then
 		Cursive.core.enable()
+	end
+
+	-- AddOn Options pages last, in a pcall: an error there must not stop Cursive working.
+	-- The error is passed on unchanged so BugSack keeps its file:line.
+	local ok, err = pcall(Cursive.BuildOptionsPanel, Cursive)
+	if not ok then
+		geterrorhandler()(err)
 	end
 end
