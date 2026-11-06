@@ -36,7 +36,6 @@ L:RegisterTranslations("enUS", function()
 		["|cffffcc00Cursive:|cffffaaaa Unknown command."] = true,
 
 		-- curses
-		["(.+) fades from (.+)"] = true,
 		["Your (.+) was resisted by (.+)"] = true,
 		["Your (.+) missed (.+)"] = true,
 		["Your (.+) is parried by (.+)"] = true,
@@ -254,7 +253,6 @@ L:RegisterTranslations("zhCN", function()
 		["|cffffcc00Cursive:|cffffaaaa Unknown command."] = "|cffffcc00Cursive:|cffffaaaa 未知命令.",
 
 		-- curses
-		["(.+) fades from (.+)"] = "(.+)效果从(.+)身上消失",
 		["Your (.+) was resisted by (.+)"] = "你的(.+)被(.+)抵抗了",
 		["Your (.+) is parried by (.+)"] = "你的(.+)被(.+)招架了",
 		["Your (.+) missed (.+)"] = "你的(.+)没有击中(.+)",

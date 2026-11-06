@@ -11,6 +11,7 @@ local REQUIRED = {
 	'C_Spell.IsSpellInRange',
 	'C_Spell.CastAtUnit',
 	'C_Spell.GetSpellTexture',
+	'CombatLogGetCurrentEventInfo',
 }
 
 local function resolve(path)

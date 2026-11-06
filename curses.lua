@@ -77,9 +77,6 @@ local curses = {
   }
 }
 
--- combat events for curses
-local fades_test = L["(.+) fades from (.+)"]
-
 -- returns the curse record for guid/name only while it exists and hasn't run out
 -- (HasCurse can also answer true for a pending cast, which has no record to modify)
 local function GetActiveCurse(guid, curseName)
@@ -286,17 +283,6 @@ function curses:ScanGuidForCurse(guid, curseSpellID)
 	return nil
 end
 
-function curses:GetLowercaseSpellName(spellName)
-	spellName = string.lower(spellName)
-
-	-- handle faerie fire special case
-	if curses.isDruid and string.find(spellName, L["faerie fire"]) then
-		return L["faerie fire"]
-	end
-
-	return spellName
-end
-
 Cursive:RegisterEvent("LEARNED_SPELL_IN_TAB", function()
 	-- reload curses in case spell slots changed
 	curses:LoadCurses()
@@ -463,28 +449,52 @@ Cursive:RegisterEvent("SPELL_MISS_SELF", function(casterGuid, targetGuid, spellI
   end
 end)
 
-Cursive:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_OTHER", function(message)
-	-- check if spell that faded is relevant
-	local _, _, spellName, target = string.find(message, fades_test)
-	if spellName and target then
-		spellName = curses:GetLowercaseSpellName(spellName)
-		if curses.trackedCurseNamesToTextures[spellName] then
-			-- loop through targets with active curses
-			for guid, data in pairs(curses.guids) do
-				for curseName, curseData in pairs(data) do
-					if curseName == spellName then
-						-- see if target still has that curse
-						if not curses:ScanGuidForCurse(guid, curseData.appliedSpellID or curseData.spellID) then
-							-- remove curse
-							curses:RemoveCurse(guid, curseName)
-						end
-					end
-				end
-			end
+-- After an aura on a tracked mob goes away, drop the matching record once the mob really
+-- no longer has that spell. Checked a moment later because another player's copy of the same
+-- spell can be the one that went (the mob still has ours), and so the aura list is up to date.
+local function VerifyAuraRemoved(guid, spellID)
+	local guidCurses = curses.guids[guid]
+	if not guidCurses then
+		return
+	end
+	for curseName, curseData in pairs(guidCurses) do
+		if (curseData.appliedSpellID or curseData.spellID) == spellID and
+				not curses:ScanGuidForCurse(guid, spellID) then
+			curses:RemoveCurse(guid, curseName)
 		end
 	end
 end
-)
+
+-- Forget a dead mob straight away instead of waiting for the display's cleanup pass.
+local function ForgetGuid(guid)
+	Cursive.core.remove(guid)
+	curses:RemoveGuid(guid)
+	for _, guids in pairs(curses.sharedDebuffGuids) do
+		guids[guid] = nil
+	end
+end
+
+-- The combat log names the mob by GUID and the aura by spell id, so this replaces parsing the
+-- localized "X fades from Y" chat text and re-scanning every mob with a debuff of that name.
+Cursive:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED", function()
+	local _, subevent, _, _, _, _, _, destGUID, _, _, _, spellID = CombatLogGetCurrentEventInfo()
+
+	if subevent == "SPELL_AURA_REMOVED" then
+		local guidCurses = destGUID and curses.guids[destGUID]
+		if guidCurses then
+			for _, curseData in pairs(guidCurses) do
+				if (curseData.appliedSpellID or curseData.spellID) == spellID then
+					Cursive:ScheduleEvent(VerifyAuraRemoved, 0.2, destGUID, spellID)
+					return
+				end
+			end
+		end
+	elseif subevent == "UNIT_DIED" then
+		if destGUID and (Cursive.core.guids[destGUID] or curses.guids[destGUID]) then
+			ForgetGuid(destGUID)
+		end
+	end
+end)
 
 function curses:GetLastTickTime(curseData)
 	local ticks = curses.trackedCurseIds[curseData.spellID].numTicks
