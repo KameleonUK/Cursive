@@ -214,7 +214,7 @@ If that verification failure happened while the target was not at the client buf
 
 Mobs with raid marks will be displayed first.
 
-Mobs will the top 3 max hps will always display next. I may make this configurable in the future.
+The mobs with the highest max HP always display next: 3 by default, set with "Top Max HP Mobs" (0-3) on the Bars page.
 
 There is an option "always show current target" that will display your current target in the last slot if they aren't already being displayed.
 
@@ -230,7 +230,7 @@ and stays off.
 
 ### Version history
 
-- **Unreleased**
+- **3.3.0**
   - New: debuff timers come from the game itself, with talents, combo points, Turtle's Rip, Conflagrate, Molten Blast
     and Carnage included. Cursive no longer scans spell tooltips. With the Idol of the Black Morass equipped, Rip keeps
     Cursive's own calculation.
@@ -238,6 +238,7 @@ and stays off.
   - New: Malediction setting in the options menu, used when a command has no `malediction=` option.
   - New: settings pages in Game Menu > AddOn Options > Cursive. `/cursive` and a left click on the minimap icon open
     them, and `/cursive help` lists the commands. Right-clicking the minimap icon still opens the quick menu.
+  - New: "Top Max HP Mobs" setting (0-3) for how many of the highest max HP mobs are always shown.
   - Crowd control, `ignorespellid` and `ignorespelltexture` checks also see debuffs Turtle moves into buff slots.
 - **3.2.0**
   - Fixed: Shackle Undead is treated as crowd control again, so commands don't break a priest's shackle.

@@ -3,6 +3,6 @@
 ## Title-zhCN: Cursive |cffc8a2c8(Requires Classic API)|r
 ## Author: Pepopo & Heallios
 ## Notes: This build only runs with the ClassicAPI DLL; ClassicAPI loads Cursive_ClassicAPI.toc instead of this file.
-## Version: 3.2.0
+## Version: 3.3.0
 
 classicapi_required.lua
