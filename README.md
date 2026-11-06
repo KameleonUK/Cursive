@@ -2,7 +2,9 @@
 
 > [!IMPORTANT]
 >
-> **This addon requires you to have Nampower >= 2.40.0 installed.**
+> **This addon requires the [ClassicAPI](https://github.com/brues-code/ClassicAPI) DLL and Nampower >= 2.40.0.**
+>
+> SuperWoW is no longer required. If it is installed, hovering a mob's bar also makes it your mouseover unit.
 
 ![image](https://github.com/pepopo978/Cursive/assets/149287158/801511af-29c7-4baf-b1ac-5e8c52f0f846)
 
@@ -134,7 +136,7 @@ This also works for Multicurse:
 Example with more options
 `/script Cursive:Multicurse("Curse of Recklessness", "HIGHEST_HP", {warnings=1,resistsound=1,expiringsound=1,refreshtime=2})`
 
-All cursive commands will return true only if it attempted to cast or it found a target.
+All cursive commands return true only if the cast went out (curse, multicurse) or a target was found (target, GetTarget). A cast the game refuses, for example because the mob is out of range, returns false, so the next spell in an `if not ... then` chain gets its turn.
 
 ## Shared Debuffs
 
@@ -149,7 +151,7 @@ Cursive data can be accessed in other addons
 You can check if curse is active with
 `Cursive.curses:HasCurse(lowercaseSpellNameNoRank, targetGuid, minRemaining, malediction)`
 
-For example `Cursive.curses:HasCurse("corruption", GetUnitGUID("target"), 3, false)` or `Cursive.curses:HasCurse(Cursive.utils.GetLowercaseSpellNameNoRank("Corruption (Rank 2)"), GetUnitGUID("target"), 3, false)` will check if Corruption is on the current target with at least 3 seconds remaining.  It won't specifically check for rank 2 just wanted to show that HasCurse only works with the lowercase spell name without rank.
+For example `Cursive.curses:HasCurse("corruption", UnitGUID("target"), 3, false)` or `Cursive.curses:HasCurse(Cursive.utils.GetLowercaseSpellNameNoRank("Corruption (Rank 2)"), UnitGUID("target"), 3, false)` will check if Corruption is on the current target with at least 3 seconds remaining.  It won't specifically check for rank 2 just wanted to show that HasCurse only works with the lowercase spell name without rank.
 
 You can get raw curse data using 
 `Cursive.curses:GetCurseData(spellName, guid)`
@@ -170,14 +172,14 @@ Curse data is a table with the following structure:
 
 Here's an example that gets the time left on Corruption on the current target:
 ```
-/run _, guid = UnitExists("target"); local data = Cursive.curses:GetCurseData("Corruption", guid); print(Cursive.curses:TimeRemaining(data))
+/run local guid = UnitGUID("target"); local data = Cursive.curses:GetCurseData("Corruption", guid); print(Cursive.curses:TimeRemaining(data))
 ```
 
 ## Important info
 
-If you have my latest nampower, it will use the SpellInRange function from that to provide improved range checking.
+Range checks use ClassicAPI's `C_Spell.IsSpellInRange`, the same check the action bars use, so the target's size and melee range (Rake, Rend, Garrote) are taken into account. If the game can't check range for a spell, commands fall back to targets within 28 yards.
 
-Otherwise, all commands will prioritize targets within 28 yards of you first to have a better chance of being in range.
+The "Within 45 Range" mob filter measures the distance from you to the mob's centre.
 
 All commands will ignore targets with the following CCs on them:
 

@@ -9,7 +9,7 @@ Cursive.core.tooltipScan = CreateFrame("GameTooltip", "CursiveTooltipScan", UIPa
 Cursive.core.guids = {}
 
 Cursive.core.add = function(unit)
-	local _, guid = UnitExists(unit)
+	local guid = UnitGUID(unit)
 
 	if guid and not UnitIsDead(unit) then
 		Cursive.core.guids[guid] = GetTime()

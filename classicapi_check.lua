@@ -5,7 +5,12 @@
 -- Keep REQUIRED in sync with the code: grep the addon for C_ namespaces and other ClassicAPI globals.
 
 local REQUIRED = {
-	-- filled in as each area is ported to ClassicAPI
+	'UnitGUID',
+	'IsUnitToken',
+	'UnitDistanceSquared',
+	'C_Spell.IsSpellInRange',
+	'C_Spell.CastAtUnit',
+	'C_Spell.GetSpellTexture',
 }
 
 local function resolve(path)

@@ -431,8 +431,8 @@ local mobFilters = {
 	},
 	["range"] = {
 		type = "toggle",
-		name = IsSpellInRange and L["Within 45 Range"] or L["Within 28 Range"],
-		desc = IsSpellInRange and L["Within 45 Range"] or L["Within 28 Range"],
+		name = L["Within 45 Range"],
+		desc = L["Within 45 Range"],
 		order = 44,
 		get = function()
 			return Cursive.db.profile.filterrange

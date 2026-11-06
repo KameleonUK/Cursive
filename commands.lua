@@ -397,7 +397,21 @@ local function scoreTarget(selectedPriority, guid, isPrioTarget)
 	return tier, primary, secondary
 end
 
-local function pickTarget(selectedPriority, lowercaseSpellNameNoRank, checkRange, options)
+-- C_Spell.IsSpellInRange uses the engine's own range check (target size and melee range included).
+-- It returns nil when the check doesn't apply (spell not in the spellbook, wrong target type);
+-- then fall back to 28 yards.
+local function isSpellInRange(spellNameNoRank, lowercaseSpellNameNoRank, guid)
+	local result = C_Spell.IsSpellInRange(spellNameNoRank, guid)
+	if result == nil and Cursive.curses.isDruid and string.find(lowercaseSpellNameNoRank, "faerie fire %(feral%)") then
+		result = C_Spell.IsSpellInRange(17392, guid) -- Faerie Fire (Feral) by spell id
+	end
+	if result == nil then
+		return CheckInteractDistance(guid, 4) and true or false
+	end
+	return result
+end
+
+local function pickTarget(selectedPriority, spellNameNoRank, lowercaseSpellNameNoRank, options)
 	-- Curse the target that best matches the selected priority
 	local bestTier, bestPrimary, bestSecondary
 	local targetedGuid = nil
@@ -406,7 +420,7 @@ local function pickTarget(selectedPriority, lowercaseSpellNameNoRank, checkRange
 	local ignoreInFight = options["allowooc"]
 	local refreshTime = options["refreshtime"]
 
-	local _, currentTargetGuid = UnitExists("target")
+	local currentTargetGuid = UnitGUID("target")
 
 	for guid, time in pairs(Cursive.core.guids) do
 		-- apply filters
@@ -417,26 +431,7 @@ local function pickTarget(selectedPriority, lowercaseSpellNameNoRank, checkRange
 				-- check if in combat already or player is actively targeting the mob
 				if ignoreInFight or Cursive.filter.infight(guid) or guid == currentTargetGuid then
 					if passedOptionFilters(guid, options) then
-						local passedRangeCheck = false
-						if IsSpellInRange then
-							local result
-							if Cursive.curses.isDruid and string.find(lowercaseSpellNameNoRank, "faerie fire %(feral%)") then
-								-- IsSpellInRange doesn't work with Faerie Fire (Feral), use spellid instead
-								result = IsSpellInRange(17392, guid)
-							else
-								result = IsSpellInRange(lowercaseSpellNameNoRank, guid)
-							end
-							if result == -1 then
-								passedRangeCheck = checkRange == false or CheckInteractDistance(guid, 4) -- fallback to old range check
-							else
-								-- 0 or 1
-								passedRangeCheck = result == 1
-							end
-						else
-							-- prioritize targets within 28 yards first to improve chances of being in range
-							passedRangeCheck = checkRange == false or CheckInteractDistance(guid, 4)
-						end
-						if passedRangeCheck then
+						if isSpellInRange(spellNameNoRank, lowercaseSpellNameNoRank, guid) then
 							-- check if the target has the curse
               if not Cursive.curses:HasCurse(lowercaseSpellNameNoRank, guid, refreshTime, options["malediction"]) and
                   not isMobCrowdControlled(guid) and
@@ -462,22 +457,24 @@ local function pickTarget(selectedPriority, lowercaseSpellNameNoRank, checkRange
 		end
 	end
 
-	-- run again if no target found ignoring range (only if IsSpellInRange is not available)
-	if not targetedGuid and checkRange == true and not IsSpellInRange then
-		targetedGuid = pickTarget(selectedPriority, lowercaseSpellNameNoRank, false, options)
-	end
-
 	return targetedGuid
 end
 
+-- C_Spell.CastAtUnit casts on the GUID whatever the current target is (it replaces SuperWoW's
+-- two-argument CastSpellByName). Returns false when the cast didn't go out, so Curse and
+-- Multicurse can report that and a macro chain can move on to its next spell.
 local function castSpellWithOptions(spellName, lowercaseSpellNameNoRank, targetedGuid, options)
+	if not C_Spell.CastAtUnit(spellName, targetedGuid) then
+		return false
+	end
+
 	if options["resistsound"] then
 		Cursive.curses:EnableResistSound(targetedGuid)
 	end
 	if options["expiringsound"] then
 		Cursive.curses:RequestExpiringSound(lowercaseSpellNameNoRank, targetedGuid)
 	end
-	CastSpellByName(spellName, targetedGuid)
+	return true
 end
 
 function Cursive:Curse(spellName, targetedGuid, options)
@@ -489,8 +486,12 @@ function Cursive:Curse(spellName, targetedGuid, options)
 	end
 
 	if targetedGuid and string.sub(targetedGuid, 1, 2) ~= "0x" then
-		local _, unitGuid = UnitExists(targetedGuid)
-		targetedGuid = unitGuid
+		-- "target", "mouseover", "mark8", ...; UnitGUID raises an error on text that isn't a unit token
+		if IsUnitToken(targetedGuid) then
+			targetedGuid = UnitGUID(targetedGuid)
+		else
+			targetedGuid = nil
+		end
 
 		if not targetedGuid then
 			if options["warnings"] then
@@ -516,8 +517,8 @@ function Cursive:Curse(spellName, targetedGuid, options)
 	if targetedGuid and
 			not Cursive.curses:HasCurse(lowercaseSpellNameNoRank, targetedGuid, options["refreshtime"], options["malediction"]) and
 			not isMobCrowdControlled(targetedGuid) and
-			not isMobSpellImmune(targetedGuid) then
-		castSpellWithOptions(string.lower(spellName), lowercaseSpellNameNoRank, targetedGuid, options)
+			not isMobSpellImmune(targetedGuid) and
+			castSpellWithOptions(spellName, lowercaseSpellNameNoRank, targetedGuid, options) then
 		return true
 	elseif options["warnings"] then
 		DEFAULT_CHAT_FRAME:AddMessage(curseNoTarget)
@@ -545,17 +546,17 @@ local function getSpellTarget(spellName, priority, options)
 	local selectedPriority = priority or PRIORITY_HIGHEST_HP
 
 	-- remove (Rank x) from spellName if it exists
+	local spellNameNoRank = Cursive.utils.GetSpellNameNoRank(spellName)
 	local lowercaseSpellNameNoRank = Cursive.utils.GetLowercaseSpellNameNoRank(spellName)
 
-	return pickTarget(selectedPriority, lowercaseSpellNameNoRank, true, options)
+	return pickTarget(selectedPriority, spellNameNoRank, lowercaseSpellNameNoRank, options)
 end
 
 function Cursive:Multicurse(spellName, priority, options)
 	options = options or {}
 	local targetedGuid = getSpellTarget(spellName, priority, options)
-	if targetedGuid then
-		local lowercaseSpellNameNoRank = Cursive.utils.GetLowercaseSpellNameNoRank(spellName)
-		castSpellWithOptions(string.lower(spellName), lowercaseSpellNameNoRank, targetedGuid, options)
+	local lowercaseSpellNameNoRank = spellName and Cursive.utils.GetLowercaseSpellNameNoRank(spellName)
+	if targetedGuid and castSpellWithOptions(spellName, lowercaseSpellNameNoRank, targetedGuid, options) then
 		return true
 	elseif options["warnings"] then
 		DEFAULT_CHAT_FRAME:AddMessage(curseNoTarget)

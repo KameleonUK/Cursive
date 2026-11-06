@@ -205,8 +205,17 @@ utils.GetLevelString = function(unitstr)
 	return level
 end
 
+-- "Corruption (Rank 2)" / "Moonfire(Rank 10)" -> "Corruption" / "Moonfire", case kept.
+-- Strips the space before the rank and ranks of two digits too; the old pattern
+-- (%([rR]ank %d%)) left "corruption " behind and never matched "(Rank 10)".
+utils.GetSpellNameNoRank = function(spellName)
+	local name = string.gsub(spellName, "%s*%([rR]ank %d+%)", "")
+	local _, _, trimmed = string.find(name, "^%s*(.-)%s*$")
+	return trimmed
+end
+
 utils.GetLowercaseSpellNameNoRank = function(spellName)
-	return string.lower(string.gsub(spellName, "%([rR]ank %d%)", ""))
+	return string.lower(utils.GetSpellNameNoRank(spellName))
 end
 
 Cursive.utils = utils

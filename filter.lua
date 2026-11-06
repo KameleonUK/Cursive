@@ -29,13 +29,12 @@ filter.alive = function(unit)
 	return not UnitIsDead(unit) and true or false
 end
 
+local RANGE_YARDS = 45
+
+-- distance from the player, centre to centre (replaces asking whether Hex, 16707, is in range)
 filter.range = function(unit)
-	if IsSpellInRange then
-		-- 16707 is hex which has 45 yd range
-		return IsSpellInRange(16707, unit) == 1 and true or false
-	else
-		return CheckInteractDistance(unit, 4) and true or false
-	end
+	local distanceSquared, checked = UnitDistanceSquared(unit)
+	return checked and distanceSquared <= RANGE_YARDS * RANGE_YARDS or false
 end
 
 filter.icon = function(unit)
@@ -90,7 +89,7 @@ function Cursive:ShouldDisplayGuid(guid)
 		return false
 	end
 
-	local _, targetGuid = UnitExists("target")
+	local targetGuid = UnitGUID("target")
 
 	-- always show target if attackable
 	if (targetGuid == guid) and filter.attackable(guid) then

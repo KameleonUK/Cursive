@@ -185,7 +185,11 @@ ui.BarEnter = function()
 	end
 	this.parent.hover = true
 
-  SetMouseoverUnit(this.parent.guid)
+	-- SetMouseoverUnit comes from SuperWoW, which is optional: without it the bar still shows
+	-- the tooltip but doesn't become your mouseover unit
+	if SetMouseoverUnit then
+		SetMouseoverUnit(this.parent.guid)
+	end
 	GameTooltip_SetDefaultAnchor(GameTooltip, this)
 	GameTooltip:SetUnit(this.parent.guid)
 	GameTooltip:Show()
@@ -193,7 +197,9 @@ end
 
 ui.BarLeave = function()
 	this.parent.hover = false
-  SetMouseoverUnit()
+	if SetMouseoverUnit then
+		SetMouseoverUnit()
+	end
 	GameTooltip:Hide()
 end
 
@@ -736,11 +742,13 @@ ui:SetScript("OnUpdate", function()
 
 	local averageMaxHp = 0
 
-	local _, currentTargetGuid = UnitExists("target")
+	local currentTargetGuid = UnitGUID("target")
 
 	-- first consider raid marks
 	for i = 8, 1, -1 do
-		local _, guid = UnitExists("mark" .. i)
+		-- UnitExists first: a mark on a corpse or object is not a unit to show
+		local markUnit = "mark" .. i
+		local guid = UnitExists(markUnit) and UnitGUID(markUnit)
 		if guid then
 			if Cursive:ShouldDisplayGuid(guid) then
 				numDisplayable = numDisplayable + 1

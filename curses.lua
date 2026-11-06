@@ -205,7 +205,7 @@ function curses:LoadCurses()
 
 	for id, data in pairs(curses.trackedCurseIds) do
 		-- get the texture
-    local texture = GetSpellIconTexture(GetSpellRecField(id, "spellIconID"))
+    local texture = C_Spell.GetSpellTexture(id)
 		-- update trackedCurseNamesToTextures
 		curses.trackedCurseNamesToTextures[data.name] = texture
 		-- update trackedCurseIds
