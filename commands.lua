@@ -268,10 +268,18 @@ local spellImmuneGuids = {
   ["0xF1300030A9014E6D"] = true, -- Blackwing Spellbinder
 }
 
+-- every aura on the mob, buffs and debuffs (immunities such as Divine Shield are buffs);
+-- C_UnitAuras also reads debuffs Turtle spills into free buff slots
+local function getAuras(guid)
+	if not guid or not UnitExists(guid) then
+		return {}
+	end
+	return C_UnitAuras.GetUnitAuras(guid)
+end
+
 local function isMobCrowdControlled(guid)
-	local auras = GetUnitField(guid, "aura") or {}
-	for i, spellId in pairs(auras) do
-		if crowdControlledSpellIds[spellId] then
+	for _, aura in ipairs(getAuras(guid)) do
+		if crowdControlledSpellIds[aura.spellId] then
 			return true
 		end
 	end
@@ -295,36 +303,21 @@ local function GetSquarePrioRaidTargetIndex(guid)
 end
 
 local function hasSpellId(guid, ignoreSpellId)
-	local auras = GetUnitField(guid, "aura") or {}
-	for i, spellId in pairs(auras) do
-		if spellId == ignoreSpellId then
+	for _, aura in ipairs(getAuras(guid)) do
+		if aura.spellId == ignoreSpellId then
 			return true
 		end
 	end
 	return false
 end
 
+-- ignorespelltexture=Spell_Shadow_UnholyStrength matches any part of the icon path, as plain text
 local function hasSpellTexture(guid, ignoreTexture)
-	for i = 1, 16 do
-		local texture = UnitDebuff(guid, i);
-		if not texture then
-			break
-		end
-		if string.find(texture, ignoreTexture) then
+	for _, aura in ipairs(getAuras(guid)) do
+		if aura.icon and string.find(aura.icon, ignoreTexture, 1, true) then
 			return true
 		end
 	end
-
-	for i = 1, 32 do
-		local texture = UnitBuff(guid, i);
-		if not texture then
-			break
-		end
-		if string.find(texture, ignoreTexture) then
-			return true
-		end
-	end
-
 	return false
 end
 

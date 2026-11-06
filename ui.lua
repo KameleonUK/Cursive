@@ -517,16 +517,6 @@ local function GetBarCords(row, col)
 	return x, y
 end
 
-local function hasAnySpellId(guid, spellIds)
-	local auras = GetUnitField(guid, "aura") or {}
-	for i, spellId in pairs(auras) do
-		if spellIds[spellId] then
-			return spellId
-		end
-	end
-	return nil
-end
-
 local function GetSortedCurses(guidCurses)
 	-- Collect keys
 	local curseNames = {}
@@ -586,19 +576,7 @@ local function DisplayGuid(guid)
 		unitFrame.pos = x .. y
 	end
 
-	-- check for shared debuffs
-	for sharedDebuffKey, guids in pairs(Cursive.curses.sharedDebuffGuids) do
-		if guids[guid] then
-			local sharedDebuffSpellIds = Cursive.curses.sharedDebuffs[sharedDebuffKey]
-			local spellId = hasAnySpellId(guid, sharedDebuffSpellIds)
-			if spellId ~= nil then
-				-- add curse to curses
-				Cursive.curses:ApplySharedCurse(sharedDebuffKey, spellId, guid, GetTime())
-				-- remove guid
-				Cursive.curses.sharedDebuffGuids[sharedDebuffKey][guid] = nil
-			end
-		end
-	end
+	-- other players' shared debuffs (Faerie Fire) are added from the combat log in curses.lua
 
 	-- update curses
 	local curseNumber = 1
@@ -675,13 +653,6 @@ local function CheckForCleanup(guid, time)
 		Cursive.core.remove(guid)
 		-- remove from curses
 		Cursive.curses:RemoveGuid(guid)
-
-		-- remove from sharedDebuffGuids
-		for sharedDebuffKey, guids in pairs(Cursive.curses.sharedDebuffGuids) do
-			if guids[guid] then
-				Cursive.curses.sharedDebuffGuids[sharedDebuffKey][guid] = nil
-			end
-		end
 	end
 end
 

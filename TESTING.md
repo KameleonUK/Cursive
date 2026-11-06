@@ -16,6 +16,12 @@ Everything not listed here has been tested in game.
 - [ ] Another player's copy of one of your debuffs (e.g. another priest's Shadow Word: Pain) runs out or is dispelled on
       a mob that also has yours: your icon stays.
 
+## Another druid (batch 5)
+
+- [ ] With "Shared Faerie Fire" on, another druid's Faerie Fire shows greyed out with the same time left as the
+      target frame, and stays right when they refresh it (including a resisted refresh).
+- [ ] Your own Faerie Fire on the same mob stays in colour.
+
 ## Priest
 
 - [ ] With Improved Shadow Word: Pain, SW:P shows 24 s and matches the target frame.
@@ -25,6 +31,8 @@ Everything not listed here has been tested in game.
 - [ ] Corruption, Curse of Agony and Siphon Life timers match the target frame within a few tenths of a second.
 - [ ] Conflagrate cuts 3 s off Immolate's timer.
 - [ ] Dark Harvest still makes the DoT timers count down faster while channelled.
+- [ ] Malediction setting (batch 5): with it on, `/cursive curse Curse of Recklessness|target` doesn't cast while your
+      Curse of Agony is up; with it off, it does. `malediction=1` / `malediction=0` in the command override the setting.
 
 ## Druid
 

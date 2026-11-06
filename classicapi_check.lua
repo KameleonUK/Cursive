@@ -13,6 +13,7 @@ local REQUIRED = {
 	'C_Spell.GetSpellTexture',
 	'CombatLogGetCurrentEventInfo',
 	'C_UnitAuras.GetUnitAuraBySpellID',
+	'C_UnitAuras.GetUnitAuras',
 	'GetInventoryItemID',
 }
 

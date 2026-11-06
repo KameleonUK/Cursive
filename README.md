@@ -106,8 +106,9 @@ All commands can take the following options separated by commas:
 - `ignorespelltexture=<str>` : "Ignore targets with the specified spell texture already on them. Useful for ignoring
   targets that already have a shared debuff.",
 - `malediction=<0|1>` : "For Warlocks with the Malediction talent: when checking if Curse of Recklessness, Curse of
-  the Elements, or Curse of Shadow is already on a target, check for Curse of Agony instead. Default is 1 (enabled).
-  Set `malediction=0` to disable and check for the original curse.",
+  the Elements, or Curse of Shadow is already on a target, check for Curse of Agony instead. Without this option the
+  Malediction setting in the options menu decides (on by default). Set `malediction=0` or `malediction=1` to override
+  it for one command.",
 
 EXAMPLE: `/cursive multicurse Corruption|HIGHEST_HP|warnings,resistsound,expiringsound,minhp=10000,refreshtime=2`
 
@@ -142,7 +143,7 @@ All cursive commands return true only if the cast went out (curse, multicurse) o
 
 Shared debuffs applied by other players will appear greyed out on targets.
 
-Currently only Faerie Fire is supported as I felt it warranted special handling.  It works by looking for other players casting faerie fire and then checking if the mob has the debuff, so if someone refreshes faerie fire and gets resisted it will incorrectly restart the timer.  However, it should still correctly remove faerie fire if it falls off that target.  I didn't want to impact performance to handle this edge case.
+Currently only Faerie Fire is supported, with the "Shared Faerie Fire" option on. Cursive sees another player's Faerie Fire land or refresh on a mob in the combat log and reads its real time left from the mob, so a resisted refresh no longer restarts the timer. It disappears when it falls off the mob. Your own Faerie Fire is never replaced by another player's.
 
 ## Accessing curse data in other addons
 
@@ -199,7 +200,7 @@ All commands will also ignore spell-immune mobs the same way they ignore crowd c
 Multicurse will only ever target enemies that are already in combat (except if you target a mob directly first) to
 prevent pulling things you didn't intend like marked patrols.
 
-For Warlocks with the Malediction talent, when checking if Curse of Recklessness, Curse of the Elements, or Curse of Shadow is already on a target, the addon will instead check for Curse of Agony to allow you to refresh agony using them. This is enabled by default and can be disabled per-command with `malediction=0`. Don't use the `refreshtime` option with this as the server won't refresh Curse of Agony if it is still on the mob.
+For Warlocks with the Malediction talent, when checking if Curse of Recklessness, Curse of the Elements, or Curse of Shadow is already on a target, the addon will instead check for Curse of Agony to allow you to refresh agony using them. This is enabled by default; turn it off with the Malediction setting, or per command with `malediction=0`. Don't use the `refreshtime` option with this as the server won't refresh Curse of Agony if it is still on the mob.
 
 Special spells such as `Rake` that deal direct damage but also apply a bleed DoT are handled differently from normal debuffs. When one lands, Cursive starts a 1 second timer then checks that the bleed aura actually appeared on the target. If it did not, Cursive removes the curse.
 
@@ -223,6 +224,13 @@ and stays off.
 
 ### Version history
 
+- **Unreleased**
+  - New: debuff timers come from the game itself, with talents, combo points, Turtle's Rip, Conflagrate, Molten Blast
+    and Carnage included. Cursive no longer scans spell tooltips. With the Idol of the Black Morass equipped, Rip keeps
+    Cursive's own calculation.
+  - New: other players' Faerie Fire shows its real time left, and a resisted refresh no longer restarts it.
+  - New: Malediction setting in the options menu, used when a command has no `malediction=` option.
+  - Crowd control, `ignorespellid` and `ignorespelltexture` checks also see debuffs Turtle moves into buff slots.
 - **3.2.0**
   - Fixed: Shackle Undead is treated as crowd control again, so commands don't break a priest's shackle.
   - Fixed: the resist sound plays for the mob that resisted.

@@ -29,9 +29,6 @@ local curses = {
 	sharedDebuffs = {
 		faeriefire = {},
 	},
-	sharedDebuffGuids = {
-		faeriefire = {}, -- used for scanning for shared debuffs like faerie fire
-	}, -- used for scanning for shared debuffs like faerie fire
 
 	-- Whitelist of mobs that can bleed (for rake tracking at client debuff cap)
 	mobsThatBleed = {
@@ -79,29 +76,17 @@ local function GetActiveCurse(guid, curseName)
 	return nil
 end
 
-local function OnSpellGoOther(itemId, spellID, casterGuid, targetGuid, castFlags, numTargetsHit, numTargetsMissed)
-	if curses.sharedDebuffs.faeriefire and curses.sharedDebuffs.faeriefire[spellID] then
-		curses.sharedDebuffGuids.faeriefire[targetGuid] = GetTime()
-	end
-end
-
--- (un)register other players' casts to match the Shared Faerie Fire setting,
--- so the toggle works without a reload
+-- Other players' Faerie Fire comes from the combat log (see the COMBAT_LOG_EVENT_UNFILTERED
+-- handler), which checks the setting on every event, so the toggle works without a reload.
+-- Turning it off only has to clear the ones already shown.
 function curses:UpdateSharedDebuffEvents()
-	local enabled = Cursive.db.profile.shareddebuffs.faeriefire
-	local registered = Cursive:IsEventRegistered("SPELL_GO_OTHER")
-
-	if enabled and not registered then
-		Cursive:RegisterEvent("SPELL_GO_OTHER", OnSpellGoOther)
-	elseif not enabled and registered then
-		Cursive:UnregisterEvent("SPELL_GO_OTHER")
-		curses.sharedDebuffGuids.faeriefire = {}
-		-- drop other players' Faerie Fires already shown
-		local faerieFire = L["faerie fire"]
-		for guid, guidCurses in pairs(curses.guids) do
-			if guidCurses[faerieFire] and guidCurses[faerieFire].currentPlayer == false then
-				guidCurses[faerieFire] = nil
-			end
+	if Cursive.db.profile.shareddebuffs.faeriefire then
+		return
+	end
+	local faerieFire = L["faerie fire"]
+	for guid, guidCurses in pairs(curses.guids) do
+		if guidCurses[faerieFire] and guidCurses[faerieFire].currentPlayer == false then
+			guidCurses[faerieFire] = nil
 		end
 	end
 end
@@ -264,14 +249,14 @@ local function SyncFromAura(curseData)
 	end
 end
 
+-- does the mob carry this aura (anyone's)? nil when it doesn't, or isn't loaded
 function curses:ScanGuidForCurse(guid, curseSpellID)
-  local auras = GetUnitField(guid, "aura") or {}
-  for i, spellID in pairs(auras) do
-    if spellID == curseSpellID then
-      return true
-		end
+	if not guid or not UnitExists(guid) then
+		return nil
 	end
-
+	if C_UnitAuras.GetUnitAuraBySpellID(guid, curseSpellID) then
+		return true
+	end
 	return nil
 end
 
@@ -293,6 +278,8 @@ local function GetAppliedCurseSpellID(spellID)
 	return spellID
 end
 
+local MAX_AURA_SLOTS = 48 -- 32 buff + 16 debuff slots (Turtle spills extra debuffs into free buff slots)
+
 local function VerifyMeleeBleedApplied(targetGuid, spellID)
 	local curseData = curses.trackedCurseIds[spellID]
 	if not curseData or not curseData.meleeBleed then
@@ -307,16 +294,17 @@ local function VerifyMeleeBleedApplied(targetGuid, spellID)
     return
   end
 
-  local hasFullBuffsAndDebuffs = true
 	local appliedSpellID = GetAppliedCurseSpellID(spellID)
-	local auras = GetUnitField(targetGuid, "aura") or {}
-	for i, auraSpellID in pairs(auras) do
-		if auraSpellID == appliedSpellID then
+	local auras = C_UnitAuras.GetUnitAuras(targetGuid)
+	for _, aura in ipairs(auras) do
+		if aura.spellId == appliedSpellID then
 			return
-    elseif auraSpellID <= 0 then
-      hasFullBuffsAndDebuffs = false
 		end
 	end
+
+	-- with every aura slot taken the bleed may simply not have fit, so only then
+	-- don't conclude the mob is bleed-immune
+	local hasFullBuffsAndDebuffs = table.getn(auras) >= MAX_AURA_SLOTS
 
   if not hasFullBuffsAndDebuffs then
     local mobName = UnitName(targetGuid)
@@ -440,17 +428,35 @@ end
 local function ForgetGuid(guid)
 	Cursive.core.remove(guid)
 	curses:RemoveGuid(guid)
-	for _, guids in pairs(curses.sharedDebuffGuids) do
-		guids[guid] = nil
+end
+
+-- Another player's Faerie Fire landed on (or was refreshed on) a tracked mob. The combat log only
+-- reports an aura that actually landed, so a resisted refresh no longer restarts the timer the way
+-- the old cast-based tracking (nampower SPELL_GO_OTHER) did.
+local function OnOtherPlayersAura(sourceGUID, destGUID, spellID)
+	if not Cursive.db.profile.shareddebuffs.faeriefire then
+		return
 	end
+	if not (curses.sharedDebuffs.faeriefire and curses.sharedDebuffs.faeriefire[spellID]) then
+		return
+	end
+	if not destGUID or not Cursive.core.guids[destGUID] then
+		return
+	end
+	if sourceGUID and sourceGUID == UnitGUID("player") then
+		return -- our own cast is tracked through SPELL_GO_SELF
+	end
+	curses:ApplySharedCurse("faeriefire", spellID, destGUID)
 end
 
 -- The combat log names the mob by GUID and the aura by spell id, so this replaces parsing the
 -- localized "X fades from Y" chat text and re-scanning every mob with a debuff of that name.
 Cursive:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED", function()
-	local _, subevent, _, _, _, _, _, destGUID, _, _, _, spellID = CombatLogGetCurrentEventInfo()
+	local _, subevent, _, sourceGUID, _, _, _, destGUID, _, _, _, spellID = CombatLogGetCurrentEventInfo()
 
-	if subevent == "SPELL_AURA_REMOVED" then
+	if subevent == "SPELL_AURA_APPLIED" or subevent == "SPELL_AURA_REFRESH" then
+		OnOtherPlayersAura(sourceGUID, destGUID, spellID)
+	elseif subevent == "SPELL_AURA_REMOVED" then
 		local guidCurses = destGUID and curses.guids[destGUID]
 		if guidCurses then
 			for _, curseData in pairs(guidCurses) do
@@ -610,7 +616,8 @@ function curses:HasCurse(lowercaseSpellNameNoRank, targetGuid, minRemaining, mal
 	end
 
 	if malediction == nil then
-		malediction = 1 -- default to enabled
+		-- no malediction= option given: use the saved setting (on by default)
+		malediction = Cursive.db.profile.malediction == false and 0 or 1
 	end
 
 	-- handle faerie fire special case
@@ -652,10 +659,21 @@ function curses:HasCurse(lowercaseSpellNameNoRank, targetGuid, minRemaining, mal
 end
 
 -- Apply shared curse from another player
+-- startTime is optional: without it, the timer is read from the other player's aura on the mob
+-- (C_UnitAuras), falling back to "now" and the table's duration
 function curses:ApplySharedCurse(sharedDebuffKey, spellID, targetGuid, startTime)
 	local name = curses.sharedDebuffs[sharedDebuffKey][spellID].name
 	local rank = curses.sharedDebuffs[sharedDebuffKey][spellID].rank
 	local duration = curses.sharedDebuffs[sharedDebuffKey][spellID].duration
+
+	if not startTime then
+		startTime = GetTime()
+		local aura = UnitExists(targetGuid) and C_UnitAuras.GetUnitAuraBySpellID(targetGuid, spellID, "HARMFUL|!PLAYER")
+		if aura and aura.expirationTime and aura.expirationTime > 0 and aura.duration and aura.duration > 0 then
+			duration = aura.duration
+			startTime = aura.expirationTime - aura.duration
+		end
+	end
 
 	if not curses.guids[targetGuid] then
 		curses.guids[targetGuid] = {}

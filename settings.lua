@@ -603,6 +603,18 @@ Cursive.cmdtable = {
 				Cursive.UpdateFramesFromConfig()
 			end,
 		},
+		["malediction"] = {
+			type = "toggle",
+			name = "Malediction",
+			desc = "Warlocks with the Malediction talent: when checking whether Curse of Recklessness, Curse of the Elements or Curse of Shadow is on a target, check for Curse of Agony instead. A command's malediction=0 or malediction=1 option overrides this.",
+			order = 10,
+			get = function()
+				return Cursive.db.profile.malediction
+			end,
+			set = function(v)
+				Cursive.db.profile.malediction = v
+			end,
+		},
 		["spacer"] = {
 			type = "header",
 			name = " ",
