@@ -28,6 +28,7 @@ Cursive.defaults = {
 	},
 
 	alwaysshowcurrenttarget = true,
+	topmaxhp = 3, -- mobs with the highest max HP shown right after raid-marked ones (0-3)
 
 	scale = 1,
 	healthwidth = 100,
@@ -196,6 +197,21 @@ local barOptions = {
 		end,
 		set = function(v)
 			Cursive.db.profile.alwaysshowcurrenttarget = v
+		end,
+	},
+	["topmaxhp"] = {
+		type = "range",
+		name = "Top Max HP Mobs",
+		desc = "How many of the mobs with the highest max HP are always shown, right after raid-marked mobs",
+		order = 31,
+		min = 0,
+		max = 3,
+		step = 1,
+		get = function()
+			return Cursive.db.profile.topmaxhp
+		end,
+		set = function(v)
+			Cursive.db.profile.topmaxhp = v
 		end,
 	},
 	["spacer2"] = {

@@ -52,6 +52,11 @@ Everything not listed here has been tested in game.
 
 - [ ] Molten Blast refreshes Flame Shock's timer.
 
+## Top Max HP Mobs (3.3.0, committed untested)
+
+- [ ] Bars > "Top Max HP Mobs" at 0, 1 and 3 with several mobs in combat: after the raid-marked mobs, that many of the
+      highest max HP mobs come first; at 0 the order is simply the scan order. 3 behaves as before.
+
 ## Other addons
 
 - [ ] Kui_Nameplates_Auras with its Cursive option on: nameplate debuff icons from Cursive still show.

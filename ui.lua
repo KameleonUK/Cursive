@@ -774,20 +774,23 @@ ui:SetScript("OnUpdate", function()
 		end
 	end
 
+	-- the mobs with the highest max HP come next, up to the "Top Max HP Mobs" setting (0-3)
+	local pinnedMaxHp = config.topmaxhp or 3
+
 	-- top max hp
-	if not ui.maxBarsDisplayed and numDisplayable > ui.numDisplayed and not displayedGuids[topMaxGuid] then
+	if pinnedMaxHp >= 1 and not ui.maxBarsDisplayed and numDisplayable > ui.numDisplayed and not displayedGuids[topMaxGuid] then
 		displayedGuids[topMaxGuid] = true
 		DisplayGuid(topMaxGuid)
 	end
 
 	-- second max hp
-	if not ui.maxBarsDisplayed and numDisplayable > ui.numDisplayed and not displayedGuids[secondMaxGuid] then
+	if pinnedMaxHp >= 2 and not ui.maxBarsDisplayed and numDisplayable > ui.numDisplayed and not displayedGuids[secondMaxGuid] then
 		displayedGuids[secondMaxGuid] = true
 		DisplayGuid(secondMaxGuid)
 	end
 
 	-- third max hp
-	if not ui.maxBarsDisplayed and numDisplayable > ui.numDisplayed and not displayedGuids[thirdMaxGuid] then
+	if pinnedMaxHp >= 3 and not ui.maxBarsDisplayed and numDisplayable > ui.numDisplayed and not displayedGuids[thirdMaxGuid] then
 		displayedGuids[thirdMaxGuid] = true
 
 		DisplayGuid(thirdMaxGuid)
