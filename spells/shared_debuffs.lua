@@ -1,5 +1,6 @@
+Cursive.spells = Cursive.spells or {} -- spell tables, read by curses.lua
 local L = AceLibrary("AceLocale-2.2"):new("Cursive")
-function getSharedDebuffs()
+function Cursive.spells.getSharedDebuffs()
 	return {
 		faeriefire = {
 			[770] = { name = L["faerie fire"], rank = 1, duration = 40 },

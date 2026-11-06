@@ -52,44 +52,47 @@ local priorities = {
 
 local curseNoTarget = L["|cffffcc00Cursive:|cffffaaaa Couldn't find a target to curse."]
 
-local function parseOptions(optionsStr)
-	local options = {  }
+local function trim(str)
+	local _, _, trimmed = string.find(str, "^%s*(.-)%s*$")
+	return trimmed
+end
 
-	if optionsStr then
-		for option, _ in pairs(commandOptions) do
-			-- special case for minhp as it takes a param
-			if option == "minhp" then
-				local _, _, minHp = string.find(optionsStr, "minhp=(%d+)")
-				if minHp then
-					options["minhp"] = tonumber(minHp)
+-- options that take a value, and how to convert it
+local valueOptions = {
+	minhp = tonumber,
+	refreshtime = tonumber, -- accepts decimals, e.g. refreshtime=1.5
+	ignorespellid = tonumber,
+	malediction = tonumber,
+	name = function(v) return v end, -- may contain spaces, apostrophes and hyphens (name=Kel'Thuzad)
+	ignorespelltexture = function(v) return v end,
+}
+
+-- Parses "warnings,minhp=10000,name=Touched Warrior" into a table.
+-- Options are matched as whole comma-separated tokens, so a value (such as a mob name)
+-- can no longer switch on a flag by containing its text.
+local function parseOptions(optionsStr)
+	local options = {}
+
+	if not optionsStr then
+		return options
+	end
+
+	for token in string.gfind(optionsStr, "[^,]+") do
+		local _, _, key, value = string.find(token, "^%s*([%a]+)%s*=(.*)$")
+		if key then
+			key = string.lower(key)
+			local convert = valueOptions[key]
+			value = trim(value)
+			if convert and value ~= "" then
+				options[key] = convert(value)
+			end
+		else
+			-- plain flags; also accept flags separated by spaces instead of commas
+			for word in string.gfind(token, "%S+") do
+				local flag = string.lower(word)
+				if commandOptions[flag] and not valueOptions[flag] then
+					options[flag] = true
 				end
-			elseif option == "refreshtime" then
-				local _, _, refreshTime = string.find(optionsStr, "refreshtime=(%d+)")
-				if refreshTime then
-					options["refreshtime"] = tonumber(refreshTime)
-				end
-			elseif option == "name" then
-				local _, _, name = string.find(optionsStr, "name=([%w%s]+)")
-				if name then
-					options["name"] = name
-				end
-			elseif option == "ignorespellid" then
-				local _, _, spellId = string.find(optionsStr, "ignorespellid=(%d+)")
-				if spellId then
-					options["ignorespellid"] = tonumber(spellId)
-				end
-			elseif option == "ignorespelltexture" then
-				local _, _, texture = string.find(optionsStr, "ignorespelltexture=([%w_]+)")
-				if texture then
-					options["ignorespelltexture"] = texture
-				end
-			elseif option == "malediction" then
-				local _, _, maledictionVal = string.find(optionsStr, "malediction=(%d)")
-				if maledictionVal then
-					options["malediction"] = tonumber(maledictionVal)
-				end
-			elseif string.find(optionsStr, option) then
-				options[option] = true
 			end
 		end
 	end
@@ -153,6 +156,11 @@ local crowdControlledSpellIds = {
 	[18657] = { name = L["hibernate"], rank = 2, duration = 30 },
 	[18658] = { name = L["hibernate"], rank = 3, duration = 40 },
 
+	-- real Shackle Undead ids (spells/priest.lua was corrected to these in 70b71b6)
+	[9484] = { name = L["shackle undead"], rank = 1, duration = 30 },
+	[9485] = { name = L["shackle undead"], rank = 2, duration = 40 },
+	[10955] = { name = L["shackle undead"], rank = 3, duration = 50 },
+	-- older ids, kept in case they are still used as aura ids
 	[1425] = { name = L["shackle undead"], rank = 1, duration = 30 },
 	[9486] = { name = L["shackle undead"], rank = 2, duration = 40 },
 	[10956] = { name = L["shackle undead"], rank = 3, duration = 50 },
@@ -198,7 +206,6 @@ local crowdControlledSpellIds = {
 	[12888] = { name = "Cause Insanity" },
 	[24327] = { name = "Cause Insanity" },
 	[26079] = { name = "Cause Insanity" },
-	[24327] = { name = "Cause Insanity" },
 	[23174] = { name = "Chromatic Mutation" },
 	[25806] = { name = "Creature of Nightmare" },
 	[23298] = { name = "Demonic Doom" },
@@ -288,7 +295,7 @@ local function GetSquarePrioRaidTargetIndex(guid)
 end
 
 local function hasSpellId(guid, ignoreSpellId)
-	local auras = GetUnitField(guid, "aura")
+	local auras = GetUnitField(guid, "aura") or {}
 	for i, spellId in pairs(auras) do
 		if spellId == ignoreSpellId then
 			return true
@@ -324,7 +331,8 @@ end
 local function passedOptionFilters(guid, options)
 	if options["name"] then
 		local name = UnitName(guid)
-		if not string.find(name, options["name"]) then
+		-- plain-text match: names can contain magic characters such as "-"
+		if not name or not string.find(name, options["name"], 1, true) then
 			return false
 		end
 	end
@@ -347,23 +355,58 @@ local function passedOptionFilters(guid, options)
 	return true
 end
 
+local NO_HP = 999999999999 -- bigger than any mob hp
+
+-- Scores a candidate as (tier, primary, secondary); higher is better, compared in that order.
+-- tier 2: current target with priotarget, whatever the priority direction
+-- tier 1: marked mob for the HIGHEST_HP_*RAID_MARK* priorities, so any marked mob beats any unmarked one
+local function scoreTarget(selectedPriority, guid, isPrioTarget)
+	local tier, primary, secondary = 0, 0, 0
+	local hp = UnitHealth(guid)
+
+	if isPrioTarget then
+		tier = 2
+	end
+
+	if selectedPriority == PRIORITY_HIGHEST_HP then
+		primary = hp or 0
+	elseif selectedPriority == PRIORITY_LOWEST_HP then
+		primary = -(hp or NO_HP)
+	elseif selectedPriority == PRIORITY_RAID_MARK then
+		primary = GetRaidTargetIndex(guid) or 0
+	elseif selectedPriority == PRIORITY_RAID_MARK_SQUARE then
+		primary = GetSquarePrioRaidTargetIndex(guid)
+	elseif selectedPriority == PRIORITY_INVERSE_RAID_MARK then
+		primary = -1 * (GetRaidTargetIndex(guid) or 9)
+	elseif selectedPriority == PRIORITY_HIGHEST_HP_RAID_MARK then
+		local mark = GetRaidTargetIndex(guid)
+		if mark and tier < 1 then tier = 1 end
+		primary = hp or 0
+		secondary = mark or 0
+	elseif selectedPriority == PRIORITY_HIGHEST_HP_RAID_MARK_SQUARE then
+		secondary = GetSquarePrioRaidTargetIndex(guid)
+		if secondary > -2 and tier < 1 then tier = 1 end
+		primary = hp or 0
+	elseif selectedPriority == PRIORITY_HIGHEST_HP_INVERSE_RAID_MARK then
+		local mark = GetRaidTargetIndex(guid)
+		if mark and tier < 1 then tier = 1 end
+		primary = hp or 0
+		secondary = -1 * (mark or 9)
+	end
+
+	return tier, primary, secondary
+end
+
 local function pickTarget(selectedPriority, lowercaseSpellNameNoRank, checkRange, options)
 	-- Curse the target that best matches the selected priority
-	local highestPrimaryValue = -10
-	local highestSecondaryValue = -10
+	local bestTier, bestPrimary, bestSecondary
 	local targetedGuid = nil
-
-	if selectedPriority == PRIORITY_LOWEST_HP then
-		highestPrimaryValue = 999999999999 -- should be bigger than any mob hp
-	end
 
 	local minHp = options["minhp"]
 	local ignoreInFight = options["allowooc"]
 	local refreshTime = options["refreshtime"]
 
 	local _, currentTargetGuid = UnitExists("target")
-
-	local seenRaidMark = nil -- if we have seen a raid mark
 
 	for guid, time in pairs(Cursive.core.guids) do
 		-- apply filters
@@ -399,56 +442,15 @@ local function pickTarget(selectedPriority, lowercaseSpellNameNoRank, checkRange
                   not isMobCrowdControlled(guid) and
                   not isMobSpellImmune(guid) then
 								local mobHp = UnitHealth(guid)
-								if not minHp or mobHp >= minHp then
-									local primaryValue = -1
-									local secondaryValue = -1
-									if options["priotarget"] and guid == currentTargetGuid then
-										seenRaidMark = true
-										primaryValue = 999999999999 -- should be bigger than any mob hp
-									elseif selectedPriority == PRIORITY_HIGHEST_HP then
-										primaryValue = UnitHealth(guid) or 0
-									elseif selectedPriority == PRIORITY_LOWEST_HP then
-										primaryValue = UnitHealth(guid) or 999999999999
-									elseif selectedPriority == PRIORITY_RAID_MARK then
-										primaryValue = GetRaidTargetIndex(guid) or 0
-									elseif selectedPriority == PRIORITY_RAID_MARK_SQUARE then
-										primaryValue = GetSquarePrioRaidTargetIndex(guid)
-									elseif selectedPriority == PRIORITY_INVERSE_RAID_MARK then
-										primaryValue = -1 * (GetRaidTargetIndex(guid) or 9)
-									elseif selectedPriority == PRIORITY_HIGHEST_HP_RAID_MARK then
-										secondaryValue = GetRaidTargetIndex(guid) or 0
-										if secondaryValue > 0 and not seenRaidMark then
-											highestPrimaryValue = -10 -- reset highestPriorityValue if this is the first raid mark we've seen
-											seenRaidMark = true
-										end
-										primaryValue = UnitHealth(guid) or 0
-									elseif selectedPriority == PRIORITY_HIGHEST_HP_RAID_MARK_SQUARE then
-										secondaryValue = GetSquarePrioRaidTargetIndex(guid)
-										if secondaryValue > -2 and not seenRaidMark then
-											highestPrimaryValue = -10 -- reset highestPriorityValue if this is the first raid mark we've seen
-											seenRaidMark = true
-										end
-										primaryValue = UnitHealth(guid) or 0
-									elseif selectedPriority == PRIORITY_HIGHEST_HP_INVERSE_RAID_MARK then
-										secondaryValue = -1 * (GetRaidTargetIndex(guid) or 9)
-										if secondaryValue > -9 and not seenRaidMark then
-											highestPrimaryValue = -10 -- reset highestPriorityValue if this is the first raid mark we've seen
-											seenRaidMark = true
-										end
-										primaryValue = UnitHealth(guid) or 0
-									end
+								if not minHp or (mobHp and mobHp >= minHp) then
+									local isPrioTarget = options["priotarget"] and guid == currentTargetGuid
+									local tier, primary, secondary = scoreTarget(selectedPriority, guid, isPrioTarget)
 
-									if selectedPriority == PRIORITY_LOWEST_HP then
-										if primaryValue < highestPrimaryValue then
-											highestPrimaryValue = primaryValue
-											targetedGuid = guid
-										end
-									elseif primaryValue > highestPrimaryValue then
-										highestPrimaryValue = primaryValue
-										highestSecondaryValue = secondaryValue
-										targetedGuid = guid
-									elseif primaryValue == highestPrimaryValue and secondaryValue > highestSecondaryValue then
-										highestSecondaryValue = secondaryValue
+									if not bestTier or
+											tier > bestTier or
+											(tier == bestTier and primary > bestPrimary) or
+											(tier == bestTier and primary == bestPrimary and secondary > bestSecondary) then
+										bestTier, bestPrimary, bestSecondary = tier, primary, secondary
 										targetedGuid = guid
 									end
 								end
@@ -479,13 +481,16 @@ local function castSpellWithOptions(spellName, lowercaseSpellNameNoRank, targete
 end
 
 function Cursive:Curse(spellName, targetedGuid, options)
+	options = options or {} -- /script callers may leave the options table out
+
 	if not spellName or not targetedGuid then
 		DEFAULT_CHAT_FRAME:AddMessage(commands["curse"])
 		return false
 	end
 
 	if targetedGuid and string.sub(targetedGuid, 1, 2) ~= "0x" then
-		_, targetedGuid = UnitExists(targetedGuid)
+		local _, unitGuid = UnitExists(targetedGuid)
+		targetedGuid = unitGuid
 
 		if not targetedGuid then
 			if options["warnings"] then
@@ -522,6 +527,8 @@ function Cursive:Curse(spellName, targetedGuid, options)
 end
 
 local function getSpellTarget(spellName, priority, options)
+	options = options or {} -- /script callers may leave the options table out
+
 	if not spellName then
 		DEFAULT_CHAT_FRAME:AddMessage(commands["multicurse"])
 		return
@@ -544,6 +551,7 @@ local function getSpellTarget(spellName, priority, options)
 end
 
 function Cursive:Multicurse(spellName, priority, options)
+	options = options or {}
 	local targetedGuid = getSpellTarget(spellName, priority, options)
 	if targetedGuid then
 		local lowercaseSpellNameNoRank = Cursive.utils.GetLowercaseSpellNameNoRank(spellName)

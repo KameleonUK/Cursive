@@ -1,5 +1,6 @@
+Cursive.spells = Cursive.spells or {} -- spell tables, read by curses.lua
 local L = AceLibrary("AceLocale-2.2"):new("Cursive")
-function getHunterSpells()
+function Cursive.spells.getHunterSpells()
 	return {
     [3043] = { name = L["scorpid sting"], rank = 1, duration = 21 }, -- 1 sec added to estimate travel time.  Can't use travelTime due to the spell having no direct damage component
     [14275] = { name = L["scorpid sting"], rank = 2, duration = 21 },

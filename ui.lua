@@ -123,6 +123,7 @@ local function CreateRoot()
 		this:SetPoint(anchor, UIParent, anchor, x, y)
 
 		-- save new position
+		local _
 		anchor, _, _, x, y = this:GetPoint()
 		Cursive.db.profile.anchor, Cursive.db.profile.x, Cursive.db.profile.y = anchor, x, y
 
@@ -400,11 +401,13 @@ local function CreateBarSecondSection(unitFrame, guid)
 			healthBar:SetBackdrop(ui.background)
 			healthBar:SetBackdropColor(0, 0, 0, 1)
 
-			local border = CreateFrame("Frame", "CursiveBorder", healthBar.bar)
+			-- a StatusBar has no .bar field: anchoring to healthBar.bar (nil) put the border on the screen
+			-- instead of around the bar, so the hover / in-combat border colours never showed
+			local border = CreateFrame("Frame", nil, healthBar)
 			border:SetBackdrop(ui.border)
 			border:SetBackdropColor(.2, .2, .2, 1)
-			border:SetPoint("TOPLEFT", healthBar.bar, "TOPLEFT", -2, 2)
-			border:SetPoint("BOTTOMRIGHT", healthBar.bar, "BOTTOMRIGHT", 2, -2)
+			border:SetPoint("TOPLEFT", healthBar, "TOPLEFT", -2, 2)
+			border:SetPoint("BOTTOMRIGHT", healthBar, "BOTTOMRIGHT", 2, -2)
 			healthBar.border = border
 		end
 	else
@@ -509,7 +512,7 @@ local function GetBarCords(row, col)
 end
 
 local function hasAnySpellId(guid, spellIds)
-	local auras = GetUnitField(guid, "aura")
+	local auras = GetUnitField(guid, "aura") or {}
 	for i, spellId in pairs(auras) do
 		if spellIds[spellId] then
 			return spellId
@@ -531,11 +534,11 @@ local function GetSortedCurses(guidCurses)
 		end)
 	elseif Cursive.db.profile.curseordering == L["Expiring soonest -> latest"] then
 		table.sort(curseNames, function(a, b)
-			return Cursive.curses:TimeRemaining(guidCurses[a]) < Cursive.curses:TimeRemaining(guidCurses[b])
+			return Cursive.curses:TimeLeft(guidCurses[a]) < Cursive.curses:TimeLeft(guidCurses[b])
 		end)
 	elseif Cursive.db.profile.curseordering == L["Expiring latest -> soonest"] then
 		table.sort(curseNames, function(a, b)
-			return Cursive.curses:TimeRemaining(guidCurses[a]) > Cursive.curses:TimeRemaining(guidCurses[b])
+			return Cursive.curses:TimeLeft(guidCurses[a]) > Cursive.curses:TimeLeft(guidCurses[b])
 		end)
 	end
 

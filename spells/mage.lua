@@ -1,5 +1,6 @@
+Cursive.spells = Cursive.spells or {} -- spell tables, read by curses.lua
 local L = AceLibrary("AceLocale-2.2"):new("Cursive")
-function getMageSpells()
+function Cursive.spells.getMageSpells()
 	return {
 		[118] = { name = L["polymorph"], rank = 1, duration = 20 },
 		[12824] = { name = L["polymorph"], rank = 2, duration = 30 },

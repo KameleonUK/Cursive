@@ -1,4 +1,5 @@
-function getRipDuration()
+Cursive.spells = Cursive.spells or {} -- spell tables, read by curses.lua
+local function getRipDuration()
 	-- check if using black morass idol
 	local _, _, id = strfind(GetInventoryItemLink("player", 18) or "", "item:(%d+)")
 	if id == "61699" then
@@ -10,7 +11,7 @@ function getRipDuration()
 end
 
 local L = AceLibrary("AceLocale-2.2"):new("Cursive")
-function getDruidSpells()
+function Cursive.spells.getDruidSpells()
 	return {
 		[339] = { name = L["entangling roots"], rank = 1, duration = 12 },
 		[1062] = { name = L["entangling roots"], rank = 2, duration = 15 },

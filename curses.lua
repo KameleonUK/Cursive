@@ -80,7 +80,42 @@ local curses = {
 -- combat events for curses
 local fades_test = L["(.+) fades from (.+)"]
 
-local lastGuid = nil
+-- returns the curse record for guid/name only while it exists and hasn't run out
+-- (HasCurse can also answer true for a pending cast, which has no record to modify)
+local function GetActiveCurse(guid, curseName)
+	local curseData = curses.guids[guid] and curses.guids[guid][curseName]
+	if curseData and curses:TimeLeft(curseData) >= 0 then
+		return curseData
+	end
+	return nil
+end
+
+local function OnSpellGoOther(itemId, spellID, casterGuid, targetGuid, castFlags, numTargetsHit, numTargetsMissed)
+	if curses.sharedDebuffs.faeriefire and curses.sharedDebuffs.faeriefire[spellID] then
+		curses.sharedDebuffGuids.faeriefire[targetGuid] = GetTime()
+	end
+end
+
+-- (un)register other players' casts to match the Shared Faerie Fire setting,
+-- so the toggle works without a reload
+function curses:UpdateSharedDebuffEvents()
+	local enabled = Cursive.db.profile.shareddebuffs.faeriefire
+	local registered = Cursive:IsEventRegistered("SPELL_GO_OTHER")
+
+	if enabled and not registered then
+		Cursive:RegisterEvent("SPELL_GO_OTHER", OnSpellGoOther)
+	elseif not enabled and registered then
+		Cursive:UnregisterEvent("SPELL_GO_OTHER")
+		curses.sharedDebuffGuids.faeriefire = {}
+		-- drop other players' Faerie Fires already shown
+		local faerieFire = L["faerie fire"]
+		for guid, guidCurses in pairs(curses.guids) do
+			if guidCurses[faerieFire] and guidCurses[faerieFire].currentPlayer == false then
+				guidCurses[faerieFire] = nil
+			end
+		end
+	end
+end
 
 -- I think depending on ping the combo point used event can fire either before or after your ability cast
 function curses:GetComboPointsUsed()
@@ -108,22 +143,23 @@ function curses:LoadCurses()
 	curses.isWarrior = playerClassName == "WARRIOR"
 
 	-- curses to track
+	local spells = Cursive.spells
 	if curses.isWarlock then
-		curses.trackedCurseIds = getWarlockSpells()
+		curses.trackedCurseIds = spells.getWarlockSpells()
 	elseif curses.isPriest then
-		curses.trackedCurseIds = getPriestSpells()
+		curses.trackedCurseIds = spells.getPriestSpells()
 	elseif curses.isMage then
-		curses.trackedCurseIds = getMageSpells()
+		curses.trackedCurseIds = spells.getMageSpells()
 	elseif curses.isDruid then
-		curses.trackedCurseIds = getDruidSpells()
+		curses.trackedCurseIds = spells.getDruidSpells()
 	elseif curses.isHunter then
-		curses.trackedCurseIds = getHunterSpells()
+		curses.trackedCurseIds = spells.getHunterSpells()
 	elseif curses.isRogue then
-		curses.trackedCurseIds = getRogueSpells()
+		curses.trackedCurseIds = spells.getRogueSpells()
 	elseif curses.isShaman then
-		curses.trackedCurseIds = getShamanSpells()
+		curses.trackedCurseIds = spells.getShamanSpells()
 	elseif curses.isWarrior then
-		curses.trackedCurseIds = getWarriorSpells()
+		curses.trackedCurseIds = spells.getWarriorSpells()
 	end
 
   -- build travelTimeSpellIds from spell data
@@ -139,7 +175,6 @@ function curses:LoadCurses()
   if next(curses.travelTimeSpellIds) and not Cursive:IsEventRegistered("SPELL_DAMAGE_EVENT_SELF") then
     Cursive:RegisterEvent("SPELL_DAMAGE_EVENT_SELF", function(targetGuid, casterGuid, spellID, amount, mitigationStr, hitInfo, spellSchool, effectAuraStr)
       if curses.travelTimeSpellIds[spellID] and curses.trackedCurseIds[spellID] then
-        lastGuid = targetGuid
         local duration = curses:GetCurseDuration(spellID)
         curses:ApplyCurse(spellID, targetGuid, GetTime(), duration)
       end
@@ -147,18 +182,10 @@ function curses:LoadCurses()
   end
 
 	-- load shared debuffs
-	curses.sharedDebuffs = getSharedDebuffs()
+	curses.sharedDebuffs = spells.getSharedDebuffs()
 
-  -- register faerie fire tracking from other players
-  if Cursive.db.profile.shareddebuffs.faeriefire then
-    if not Cursive:IsEventRegistered("SPELL_GO_OTHER") then
-      Cursive:RegisterEvent("SPELL_GO_OTHER", function(itemId, spellID, casterGuid, targetGuid, castFlags, numTargetsHit, numTargetsMissed)
-        if curses.sharedDebuffs.faeriefire[spellID] then
-          curses.sharedDebuffGuids.faeriefire[targetGuid] = GetTime()
-        end
-      end)
-    end
-  end
+	-- faerie fire tracking from other players
+	curses:UpdateSharedDebuffEvents()
 
 	-- go through spell slots and
 	local i = 1
@@ -195,15 +222,15 @@ function curses:LoadCurses()
 						curses.lastFerociousBiteTargetGuid ~= 0 then
 
 					-- check if Rip active
-					local rip = L["rip"]
-					if curses:HasCurse(rip, curses.lastFerociousBiteTargetGuid, 0) then
-						curses.guids[curses.lastFerociousBiteTargetGuid][rip]["start"] = GetTime() -- reset start time to current time
+					local ripData = GetActiveCurse(curses.lastFerociousBiteTargetGuid, L["rip"])
+					if ripData then
+						ripData.start = GetTime() -- reset start time to current time
 					end
 
 					-- check if Rake active
-					local rake = L["rake"]
-					if curses:HasCurse(rake, curses.lastFerociousBiteTargetGuid, 0) then
-						curses.guids[curses.lastFerociousBiteTargetGuid][rake]["start"] = GetTime() -- reset start time to current time
+					local rakeData = GetActiveCurse(curses.lastFerociousBiteTargetGuid, L["rake"])
+					if rakeData then
+						rakeData.start = GetTime() -- reset start time to current time
 					end
 				end
 			end
@@ -356,17 +383,21 @@ Cursive:RegisterEvent("SPELL_GO_SELF", function(itemId, spellID, casterGuid, tar
     if spellID >= 36916 and spellID <= 36921 then
       curses.lastMoltenBlastTargetGuid = targetGuid
       if numTargetsHit > 0 then
-        local flame_shock = L["flame shock"]
-        if curses:HasCurse(flame_shock, targetGuid, 0) then
-          curses.guids[targetGuid][flame_shock]["start"] = GetTime()
+        local flameShockData = GetActiveCurse(targetGuid, L["flame shock"])
+        if flameShockData then
+          flameShockData.start = GetTime()
         end
       end
     end
   end
 
+  if numTargetsHit > 0 and numTargetsMissed == 0 and curses.trackedCurseIds[spellID] then
+    -- the spell landed, so a resist sound requested for this cast no longer applies
+    curses.resistSoundGuids[targetGuid] = nil
+  end
+
   if numTargetsHit > 0 then
     if curses.trackedCurseIds[spellID] and not curses.travelTimeSpellIds[spellID] then
-			lastGuid = targetGuid
       local curseData = curses.trackedCurseIds[spellID]
       if curseData.meleeBleed then
         if numTargetsMissed > 0 then
@@ -424,8 +455,9 @@ end)
 Cursive:RegisterEvent("SPELL_MISS_SELF", function(casterGuid, targetGuid, spellID, missInfo)
   curses.pendingCast = {}
 
-  if curses.trackedCurseIds[spellID] and lastGuid then
-    if curses:ShouldPlayResistSound(lastGuid) then
+  -- use the mob that resisted, not the last mob a curse landed on
+  if curses.trackedCurseIds[spellID] and targetGuid then
+    if curses:ShouldPlayResistSound(targetGuid) then
       PlaySoundFile("Interface\\AddOns\\Cursive\\Sounds\\resist.mp3")
     end
   end
@@ -499,7 +531,8 @@ function curses:GetDarkHarvestReduction(curseData)
 	return 0
 end
 
-function curses:TimeRemaining(curseData)
+-- exact seconds left (Dark Harvest included); use this for decisions
+function curses:TimeLeft(curseData)
 	local dhReduction = 0
 
 	if curses.trackedCurseIds[curseData.spellID] and curses.trackedCurseIds[curseData.spellID].darkHarvest then
@@ -508,7 +541,12 @@ function curses:TimeRemaining(curseData)
 		dhReduction = curses:GetDarkHarvestReduction(curseData)
 	end
 
-	local remaining = curseData.duration - (GetTime() - curseData.start) - dhReduction
+	return curseData.duration - (GetTime() - curseData.start) - dhReduction
+end
+
+-- seconds left rounded for display (whole seconds, or tenths under 10s with Decimal Duration)
+function curses:TimeRemaining(curseData)
+	local remaining = curses:TimeLeft(curseData)
 	if Cursive.db.profile.curseshowdecimals and remaining < 10 then
 		-- round to 1 decimal point
 		remaining = math.floor(remaining * 10) / 10
@@ -608,7 +646,8 @@ function curses:HasCurse(lowercaseSpellNameNoRank, targetGuid, minRemaining, mal
 	end
 
 	if curses.guids[targetGuid] and curses.guids[targetGuid][lowercaseSpellNameNoRank] then
-		local remaining = Cursive.curses:TimeRemaining(curses.guids[targetGuid][lowercaseSpellNameNoRank])
+		-- exact time, not the rounded display value, so refreshtime doesn't depend on display settings
+		local remaining = curses:TimeLeft(curses.guids[targetGuid][lowercaseSpellNameNoRank])
 
 		if remaining >= minRemaining then
 			return true
@@ -635,6 +674,12 @@ function curses:ApplySharedCurse(sharedDebuffKey, spellID, targetGuid, startTime
 
 	if not curses.guids[targetGuid] then
 		curses.guids[targetGuid] = {}
+	end
+
+	-- never replace the player's own active debuff with another player's
+	local existing = GetActiveCurse(targetGuid, name)
+	if existing and existing.currentPlayer then
+		return
 	end
 
 	curses.guids[targetGuid][name] = {
@@ -677,9 +722,10 @@ function curses:UpdateCurse(spellID, targetGuid, startTime)
 
 	if curses.conflagrateSpellIds[spellID] then
 		-- check if target has immolate
-		if curses:HasCurse(L["immolate"], targetGuid) then
+		local immolateData = GetActiveCurse(targetGuid, L["immolate"])
+		if immolateData then
 			-- reduce duration by 3 sec
-			curses.guids[targetGuid][L["immolate"]].duration = curses.guids[targetGuid][L["immolate"]].duration - 3
+			immolateData.duration = immolateData.duration - 3
 		end
 	end
 end

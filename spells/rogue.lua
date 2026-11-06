@@ -1,4 +1,5 @@
-function getGougeDuration()
+Cursive.spells = Cursive.spells or {} -- spell tables, read by curses.lua
+local function getGougeDuration()
 	-- Improved Gouge: +.5s per talent
 	local _, _, _, _, count = GetTalentInfo(2, 1)
 	if count and count > 0 then
@@ -8,7 +9,7 @@ function getGougeDuration()
 	return 4
 end
 
-function getRuptureDuration()
+local function getRuptureDuration()
 	local duration = 6 + Cursive.curses.GetComboPointsUsed() * 2
 	local _, _, _, _, count = GetTalentInfo(1, 10)
 	if count and count > 0 then
@@ -18,12 +19,12 @@ function getRuptureDuration()
 	return duration
 end
 
-function getKidneyShotDuration()
+local function getKidneyShotDuration()
 	return 1 + Cursive.curses.GetComboPointsUsed()
 end
 
 local L = AceLibrary("AceLocale-2.2"):new("Cursive")
-function getRogueSpells()
+function Cursive.spells.getRogueSpells()
 	return {
 		[2094] = { name = L["blind"], rank = 1, duration = 10 },
 		[21060] = { name = L["blind"], rank = 1, duration = 10 },

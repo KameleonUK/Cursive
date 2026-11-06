@@ -1,5 +1,6 @@
+Cursive.spells = Cursive.spells or {} -- spell tables, read by curses.lua
 local L = AceLibrary("AceLocale-2.2"):new("Cursive")
-function getWarriorSpells()
+function Cursive.spells.getWarriorSpells()
 	return {
 		[772] = { name = L["rend"], rank = 1, duration = 9, meleeBleed=true },
 		[6546] = { name = L["rend"], rank = 2, duration = 12, meleeBleed=true },

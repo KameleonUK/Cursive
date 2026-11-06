@@ -1,5 +1,6 @@
+Cursive.spells = Cursive.spells or {} -- spell tables, read by curses.lua
 local L = AceLibrary("AceLocale-2.2"):new("Cursive")
-function getWarlockSpells()
+function Cursive.spells.getWarlockSpells()
 	return {
 		[172] = { name = L["corruption"], rank = 1, duration = 12, variableDuration = true, darkHarvest = true, numTicks=4},
 		[6222] = { name = L["corruption"], rank = 2, duration = 15, variableDuration = true, darkHarvest = true, numTicks=5 },

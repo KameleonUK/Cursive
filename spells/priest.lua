@@ -1,5 +1,6 @@
+Cursive.spells = Cursive.spells or {} -- spell tables, read by curses.lua
 local L = AceLibrary("AceLocale-2.2"):new("Cursive")
-function getPriestSpells()
+function Cursive.spells.getPriestSpells()
 	return {
 		[9484] = { name = L["shackle undead"], rank = 1, duration = 30 },
 		[9485] = { name = L["shackle undead"], rank = 2, duration = 40 },

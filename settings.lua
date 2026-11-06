@@ -494,7 +494,7 @@ local mobFilters = {
 		name = L["Ignored Mobs List (Enter to save)"],
 		desc = L["Ignored Mobs Desc"],
 		usage = "whelp, black dragonkin, player3",
-		order = 68,
+		order = 69,
 		get = function()
 			if Cursive.db.profile.ignorelist and table.getn(Cursive.db.profile.ignorelist) > 0 then
 				return table.concat(Cursive.db.profile.ignorelist, ",") or ""
@@ -508,7 +508,7 @@ local mobFilters = {
 				Cursive.db.profile.ignorelist = splitIgnoreString(v, ",");
 			end
 			-- check for common lua regex patterns
-			Cursive.db.profile.ignorelistuseregex = string.find(v, "[*+%%?]") ~= nil
+			Cursive.db.profile.ignorelistuseregex = v and string.find(v, "[*+%%?]") ~= nil or false
 		end,
 	},
 }
@@ -524,6 +524,7 @@ local sharedDebuffs = {
 		end,
 		set = function(v)
 			Cursive.db.profile.shareddebuffs.faeriefire = v
+			Cursive.curses:UpdateSharedDebuffEvents() -- takes effect now, not after a reload
 			Cursive.UpdateFramesFromConfig()
 		end,
 	},
@@ -595,9 +596,10 @@ Cursive.cmdtable = {
 			desc = L["Move the frame back to the default position"],
 			order = 9,
 			func = function()
+				-- same as the defaults at the top of this file
 				Cursive.db.profile.anchor = "CENTER"
-				Cursive.db.profile.x = -100
-				Cursive.db.profile.y = -100
+				Cursive.db.profile.x = -240
+				Cursive.db.profile.y = 120
 				Cursive.UpdateFramesFromConfig()
 			end,
 		},

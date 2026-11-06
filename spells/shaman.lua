@@ -1,5 +1,6 @@
+Cursive.spells = Cursive.spells or {} -- spell tables, read by curses.lua
 local L = AceLibrary("AceLocale-2.2"):new("Cursive")
-function getShamanSpells()
+function Cursive.spells.getShamanSpells()
 	return {
 		[8050] = { name = L["flame shock"], rank = 1, duration = 12, variableDuration = true },
 		[8052] = { name = L["flame shock"], rank = 2, duration = 12, variableDuration = true },
