@@ -62,16 +62,17 @@ EXAMPLE: `/script targetGuid = Cursive:GetTarget("Corruption", "HIGHEST_HP", {})
     - Circle = 2
     - Star = 1 (8th priority)
     - No mark = 0
-- RAID_MARK_SQUARE - Target largest raid mark but ignore Skull and Cross. Priority is as follows:
+- RAID_MARK_SQUARE - Target largest raid mark, but move Cross and Skull below the other marks. Marked enemies are
+  still preferred over unmarked ones. Priority is as follows:
     - Square = 6 (1st priority)
     - Moon = 5
     - Triangle = 4
     - Diamond = 3
     - Circle = 2
     - Star = 1
-    - No mark = 0
-    - Cross = -1
-    - Skull = -2 (9th priority)
+    - Cross = 0
+    - Skull = -1
+    - No mark = -2 (9th priority)
 - INVERSE_RAID_MARK - Target lowest raid mark enemy without a curse first. (reverse of RAID_MARK)
 
 - HIGHEST_HP_RAID_MARK - Target highest HP enemy with a raid (use raid mark priorities for identical hp), then highest

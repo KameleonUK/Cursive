@@ -54,6 +54,7 @@ Cursive:RegisterDefaults("profile", {
 	filterraidmark = false,
 	filterhascurse = false,
 	filterignored = true,
+	filteruntagged = false,
 
 	ignorelist = {},
 	ignorelistuseregex = false,
@@ -474,6 +475,18 @@ local mobFilters = {
 		end,
 		set = function(v)
 			Cursive.db.profile.filterignored = v
+		end,
+	},
+	["untagged"] = {
+		type = "toggle",
+		name = "Untagged",
+		desc = "Only show mobs that are untagged or tagged by you",
+		order = 68,
+		get = function()
+			return Cursive.db.profile.filteruntagged
+		end,
+		set = function(v)
+			Cursive.db.profile.filteruntagged = v
 		end,
 	},
 	["ignorelist"] = {

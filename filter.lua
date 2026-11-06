@@ -56,6 +56,10 @@ filter.hostile = function(unit)
 	return UnitIsEnemy("player", unit) and true or false
 end
 
+filter.untagged = function(unit)
+	return (not UnitIsTapped(unit) or UnitIsTappedByPlayer(unit)) and true or false
+end
+
 filter.notignored = function(unit)
 	if not Cursive.db.profile.ignorelist or table.getn(Cursive.db.profile.ignorelist) == 0 then
 		return true
@@ -127,6 +131,10 @@ function Cursive:ShouldDisplayGuid(guid)
 	end
 
 	if Cursive.db.profile.filternotplayer and not filter.notplayer(guid) then
+		return false
+	end
+
+	if Cursive.db.profile.filteruntagged and not filter.untagged(guid) then
 		return false
 	end
 
