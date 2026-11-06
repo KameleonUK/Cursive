@@ -16,6 +16,13 @@ local function HasMinimumNampowerVersion(major, minor, patch)
   return false
 end
 
+-- ClassicAPI too old (classicapi_check.lua prints what is missing): stay off.
+-- Every file returns early when Cursive.nampower is false, so this disables the whole addon.
+if CURSIVE_CLASSICAPI_MISSING then
+  Cursive.nampower = false
+  return
+end
+
 Cursive.nampower = HasMinimumNampowerVersion(2, 40, 0)
 
 if not Cursive.nampower then

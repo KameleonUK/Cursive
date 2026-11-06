@@ -2,13 +2,6 @@ if not Cursive.nampower then
 	return
 end
 
--- add (1) for first stack of buffs/debuffs
--- other addons already do this, avoid having to parse both formats
-AURAADDEDOTHERHELPFUL = "%s gains %s (1)."
-AURAADDEDOTHERHARMFUL = "%s is afflicted by %s (1)."
-AURAADDEDSELFHARMFUL = "You are afflicted by %s (1)."
-AURAADDEDSELFHELPFUL = "You gain %s (1)."
-
 Cursive.core = CreateFrame("Frame", "Cursive", UIParent)
 
 Cursive.core.tooltipScan = CreateFrame("GameTooltip", "CursiveTooltipScan", UIParent, "GameTooltipTemplate")
