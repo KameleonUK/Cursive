@@ -4,8 +4,6 @@ end
 
 Cursive.core = CreateFrame("Frame", "Cursive", UIParent)
 
-Cursive.core.tooltipScan = CreateFrame("GameTooltip", "CursiveTooltipScan", UIParent, "GameTooltipTemplate")
-
 Cursive.core.guids = {}
 
 Cursive.core.add = function(unit)

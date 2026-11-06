@@ -7,14 +7,9 @@ local _, playerClassName = UnitClass("player")
 
 local curses = {
 	trackedCurseIds = {},
+	-- debuff name -> icon. Not used by Cursive itself any more, but other addons rely on it:
+	-- SuperCleveRoidMacros writes its custom spells into it, Kui_Nameplates_Auras reads icons from it
 	trackedCurseNamesToTextures = {},
-	trackedCurseNameRanksToSpellSlots = {},
-	conflagrateSpellIds = {
-		[17962] = true,
-		[18930] = true,
-		[18931] = true,
-		[18932] = true,
-	},
 	darkHarvestSpellIds = {
 		[52550] = true,
 		[52551] = true,
@@ -30,9 +25,6 @@ local curses = {
 	requestedExpiringSoundGuids = {}, -- guid added on spellcast, moved to expiringSoundGuids once rendered by ui
 	previousComboPoints = 0,
 	comboPoints = 0,
-	lastFerociousBiteTime = 0,
-	lastFerociousBiteTargetGuid = 0,
-	lastMoltenBlastTargetGuid = 0,
 
 	sharedDebuffs = {
 		faeriefire = {},
@@ -128,7 +120,6 @@ function curses:LoadCurses()
 	-- reset dicts
 	curses.trackedCurseIds = {}
 	curses.trackedCurseNamesToTextures = {}
-	curses.trackedCurseNameRanksToSpellSlots = {}
 
 	curses.isWarlock = playerClassName == "WARLOCK"
 	curses.isPriest = playerClassName == "PRIEST"
@@ -184,92 +175,93 @@ function curses:LoadCurses()
 	-- faerie fire tracking from other players
 	curses:UpdateSharedDebuffEvents()
 
-	-- go through spell slots and
-	local i = 1
-	while true do
-		local spellname, spellrank = GetSpellName(i, BOOKTYPE_SPELL)
-		if not spellname then
-			break
-		end
-
-		if spellrank == "" then
-			spellrank = L["Rank 1"]
-		end
-
-		curses.trackedCurseNameRanksToSpellSlots[string.lower(spellname) .. spellrank] = i
-		i = i + 1
-	end
-
 	for id, data in pairs(curses.trackedCurseIds) do
-		-- get the texture
-    local texture = C_Spell.GetSpellTexture(id)
-		-- update trackedCurseNamesToTextures
-		curses.trackedCurseNamesToTextures[data.name] = texture
-		-- update trackedCurseIds
-		curses.trackedCurseIds[id].texture = texture
+		data.texture = C_Spell.GetSpellTexture(id)
+		curses.trackedCurseNamesToTextures[data.name] = data.texture
 	end
 
+	-- combo points feed the fallback durations of Rip, Rupture and Kidney Shot
 	if curses.isDruid or curses.isRogue then
 		Cursive:RegisterEvent("PLAYER_COMBO_POINTS", function()
-			local currentComboPoints = GetComboPoints()
-			if curses.isDruid and currentComboPoints >= curses.comboPoints then
-				-- combo points did not decrease, check if Ferocious Bite was used is the last .5 sec
-				if GetTime() - curses.lastFerociousBiteTime < 0.5 and
-						curses.lastFerociousBiteTargetGuid and
-						curses.lastFerociousBiteTargetGuid ~= 0 then
-
-					-- check if Rip active
-					local ripData = GetActiveCurse(curses.lastFerociousBiteTargetGuid, L["rip"])
-					if ripData then
-						ripData.start = GetTime() -- reset start time to current time
-					end
-
-					-- check if Rake active
-					local rakeData = GetActiveCurse(curses.lastFerociousBiteTargetGuid, L["rake"])
-					if rakeData then
-						rakeData.start = GetTime() -- reset start time to current time
-					end
-				end
-			end
 			curses.previousComboPoints = curses.comboPoints
-			curses.comboPoints = currentComboPoints
+			curses.comboPoints = GetComboPoints()
 		end)
 	end
 end
 
-function curses:ScanTooltipForDuration(curseSpellID)
-	-- scan spellbook for duration in case they have haste talent
-	local nameRank = curses.trackedCurseIds[curseSpellID].name .. L["Rank"] .. " " .. curses.trackedCurseIds[curseSpellID].rank
-	local spellSlot = curses.trackedCurseNameRanksToSpellSlots[nameRank]
-
-	if spellSlot then
-		Cursive.core.tooltipScan:SetOwner(Cursive.core.tooltipScan, "ANCHOR_NONE")
-		Cursive.core.tooltipScan:ClearLines()
-		Cursive.core.tooltipScan:SetSpell(spellSlot, BOOKTYPE_SPELL)
-		local numLines = Cursive.core.tooltipScan:NumLines()
-		if numLines and numLines > 0 then
-			-- get the last line
-			local text = getglobal("CursiveTooltipScan" .. "TextLeft" .. numLines):GetText()
-			if text then
-				local _, _, duration = string.find(text, L["curse_duration_format"])
-				if duration then
-					return tonumber(duration)
-				end
-			end
-		end
+-- First guess at a duration, used until the real one is read from the mob's aura
+-- (see SyncFromAura): the spell table's value, or its calculateDuration function.
+function curses:GetCurseDuration(curseSpellID)
+	if curses.trackedCurseIds[curseSpellID].calculateDuration then
+		return curses.trackedCurseIds[curseSpellID].calculateDuration()
 	end
 
 	return curses.trackedCurseIds[curseSpellID].duration
 end
 
-function curses:GetCurseDuration(curseSpellID)
-	if curses.trackedCurseIds[curseSpellID].variableDuration then
-		return curses:ScanTooltipForDuration(curseSpellID)
-	elseif curses.trackedCurseIds[curseSpellID].calculateDuration then
-		return curses.trackedCurseIds[curseSpellID].calculateDuration()
+---------------------------------------------------------------------------------------------
+-- Real timers from ClassicAPI.
+-- C_UnitAuras reports duration and expirationTime for the player's debuffs on any unit. It
+-- takes them from the server's cast packet (talents included), snapshots combo points, knows
+-- Turtle's Rip, and mirrors Conflagrate (-3s Immolate), Molten Blast (refreshes Flame Shock)
+-- and Carnage (Ferocious Bite refreshing Rip/Rake). This replaces Cursive's spellbook tooltip
+-- scan and its own adjustments for those three. Dark Harvest is not modelled by ClassicAPI,
+-- so TimeLeft still subtracts it.
+-- Each record is read for AURA_SYNC_WINDOW seconds after the player's last cast at that mob,
+-- at most every AURA_SYNC_INTERVAL. If nothing comes back the first guess stays.
+---------------------------------------------------------------------------------------------
+local AURA_SYNC_WINDOW = 2
+local AURA_SYNC_INTERVAL = 0.1
+
+-- spells whose real duration can differ from the table: talents, combo points, or a later
+-- change by another spell. syncAura in the spell table (true/false or a function) overrides.
+local function ShouldSyncAura(spellID)
+	local data = curses.trackedCurseIds[spellID]
+	if not data then
+		return false
+	end
+	if type(data.syncAura) == "function" then
+		return data.syncAura()
+	elseif data.syncAura ~= nil then
+		return data.syncAura
+	end
+	return (data.variableDuration or data.calculateDuration) and true or false
+end
+
+-- read every own synced record on guid again for a while (after a cast that may change them)
+local function RequestAuraSync(guid)
+	local guidCurses = curses.guids[guid]
+	if not guidCurses then
+		return
+	end
+	local syncUntil = GetTime() + AURA_SYNC_WINDOW
+	for _, curseData in pairs(guidCurses) do
+		if curseData.currentPlayer and ShouldSyncAura(curseData.spellID) then
+			curseData.syncUntil = syncUntil
+		end
+	end
+end
+
+local function SyncFromAura(curseData)
+	local now = GetTime()
+	if not curseData.syncUntil or now > curseData.syncUntil then
+		return
+	end
+	if curseData.lastSync and now - curseData.lastSync < AURA_SYNC_INTERVAL then
+		return
+	end
+	curseData.lastSync = now
+
+	local guid = curseData.targetGuid
+	if not guid or not UnitExists(guid) then
+		return
 	end
 
-	return curses.trackedCurseIds[curseSpellID].duration
+	local aura = C_UnitAuras.GetUnitAuraBySpellID(guid, curseData.appliedSpellID or curseData.spellID, "HARMFUL|PLAYER")
+	if aura and aura.expirationTime and aura.expirationTime > 0 and aura.duration and aura.duration > 0 then
+		curseData.duration = aura.duration
+		curseData.start = aura.expirationTime - aura.duration
+	end
 end
 
 function curses:ScanGuidForCurse(guid, curseSpellID)
@@ -352,29 +344,10 @@ Cursive:RegisterEvent("SPELL_GO_SELF", function(itemId, spellID, casterGuid, tar
 			}
   end
 
-  if curses.isDruid then
-    -- track ferocious bite cast time and target
-    if spellID == 22557 or
-        spellID == 22568 or
-        spellID == 22827 or
-        spellID == 22828 or
-        spellID == 22829 or
-        spellID == 31018 then
-      curses.lastFerociousBiteTime = GetTime()
-      curses.lastFerociousBiteTargetGuid = targetGuid
-    end
-  end
-
-  if curses.isShaman then
-    if spellID >= 36916 and spellID <= 36921 then
-      curses.lastMoltenBlastTargetGuid = targetGuid
-      if numTargetsHit > 0 then
-        local flameShockData = GetActiveCurse(targetGuid, L["flame shock"])
-        if flameShockData then
-          flameShockData.start = GetTime()
-        end
-      end
-    end
+  if numTargetsHit > 0 then
+    -- any cast that lands can change our debuffs on that mob (Conflagrate, Molten Blast,
+    -- Ferocious Bite...); ClassicAPI applies those changes, so read the timers again
+    RequestAuraSync(targetGuid)
   end
 
   if numTargetsHit > 0 and numTargetsMissed == 0 and curses.trackedCurseIds[spellID] then
@@ -403,8 +376,6 @@ Cursive:RegisterEvent("SPELL_GO_SELF", function(itemId, spellID, casterGuid, tar
         local duration = curses:GetCurseDuration(spellID)
         curses:ApplyCurse(spellID, targetGuid, GetTime(), duration)
       end
-		elseif curses.conflagrateSpellIds[spellID] then
-      curses:UpdateCurse(spellID, targetGuid, GetTime())
 		end
   end
 end)
@@ -543,6 +514,10 @@ end
 
 -- exact seconds left (Dark Harvest included); use this for decisions
 function curses:TimeLeft(curseData)
+	if curseData.currentPlayer then
+		SyncFromAura(curseData)
+	end
+
 	local dhReduction = 0
 
 	if curses.trackedCurseIds[curseData.spellID] and curses.trackedCurseIds[curseData.spellID].darkHarvest then
@@ -723,21 +698,9 @@ function curses:ApplyCurse(spellID, targetGuid, startTime, duration)
 		appliedSpellID = GetAppliedCurseSpellID(spellID),
 		targetGuid = targetGuid,
 		currentPlayer = true,
+		-- read the real timer from the mob's aura once it lands (see SyncFromAura)
+		syncUntil = ShouldSyncAura(spellID) and (GetTime() + AURA_SYNC_WINDOW) or nil,
 	}
-end
-
-function curses:UpdateCurse(spellID, targetGuid, startTime)
-	-- clear pending cast
-	curses.pendingCast = {}
-
-	if curses.conflagrateSpellIds[spellID] then
-		-- check if target has immolate
-		local immolateData = GetActiveCurse(targetGuid, L["immolate"])
-		if immolateData then
-			-- reduce duration by 3 sec
-			immolateData.duration = immolateData.duration - 3
-		end
-	end
 end
 
 function curses:RemoveCurse(guid, curseName)

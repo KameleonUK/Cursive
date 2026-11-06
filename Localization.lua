@@ -31,21 +31,11 @@ L:RegisterTranslations("enUS", function()
 		["Same as HIGHEST_HP_RAID_MARK but with RAID_MARK_SQUARE mark prio."] = true,
 		["Same as HIGHEST_HP_RAID_MARK but with INVERSE_RAID_MARK mark prio."] = true,
 		["|cffffcc00Cursive:|cffffaaaa Couldn't find a target to curse."] = true,
-		["curse_duration_format"] = ".*over ([%d.]+) sec.",
 		["Shared Debuffs"] = true,
 		["|cffffcc00Cursive:|cffffaaaa Unknown command."] = true,
 
-		-- curses
-		["Your (.+) was resisted by (.+)"] = true,
-		["Your (.+) missed (.+)"] = true,
-		["Your (.+) is parried by (.+)"] = true,
-		["Your (.+) fail.+\. (.+) is immune"] = true,
-		["Your (.+) was blocked by (.+)"] = true,
-		["Your (.+) was dodged by (.+)"] = true,
-		["Your Molten Blast(.+)for .+ Fire damage"] = true,
 
 		-- global
-		["|cffffcc00Cursive:|cffffaaaa Couldn't detect SuperWoW."] = true,
 		["|cffffcc00Cursive:|cffffaaaa Loaded.  /cursive for commands and minimap icon for options."] = true,
 
 
@@ -72,7 +62,6 @@ L:RegisterTranslations("enUS", function()
 		["Not Player Desc"] = "Only show NON player units",
 		["Hostile"] = true,
 		["Attackable"] = true,
-		["Within 28 Range"] = true,
 		["Within 45 Range"] = true,
 		["Has Raid Mark"] = true,
 		["Has Curse"] = true,
@@ -109,7 +98,6 @@ L:RegisterTranslations("enUS", function()
 		["This will show other player's Faerie Fires and avoid trying to cast Faerie Fire on those mobs"] = true,
 
 		-- spells
-		["Rank"] = true,
 		["Rank 1"] = true,
 		["Rank 2"] = true,
 		["Rank 3"] = true,
@@ -248,21 +236,11 @@ L:RegisterTranslations("zhCN", function()
 		-- 扫击：对目标造成19点伤害，并在9秒内造成总计39点额外伤害。伤害受到你的攻击强度加成，奖励1个连击点数。
 		-- 虫群：敌人被飞虫围绕，攻击命中率降低2%，在18秒内受到总计99点自然伤害。
 		-- 月火术：灼烧敌人，对其造成40到48点伤害，并在18秒内造成额外的120点奥术伤害。
-		["curse_duration_format"] = "(%d+%.?%d*)秒",
 		["Shared Debuffs"] = "共享debuff",
 		["|cffffcc00Cursive:|cffffaaaa Unknown command."] = "|cffffcc00Cursive:|cffffaaaa 未知命令.",
 
-		-- curses
-		["Your (.+) was resisted by (.+)"] = "你的(.+)被(.+)抵抗了",
-		["Your (.+) is parried by (.+)"] = "你的(.+)被(.+)招架了",
-		["Your (.+) missed (.+)"] = "你的(.+)没有击中(.+)",
-		["Your (.+) was dodged by (.+)"] = "你的(.+)被(.+)躲闪过去了",
-		["Your (.+) was blocked by (.+)"] = "你的(.+)被(.+)格挡了",
-		["Your (.+) fail.+\. (.+) is immune"] = "你的(.+)施放失败。(.+)对此免疫",
-		["Your Molten Blast(.+)for .+ Fire damage"] = "你的熔岩爆裂(.+)造成了.+点火焰伤害",
 
 		-- global
-		["|cffffcc00Cursive:|cffffaaaa Couldn't detect SuperWoW."] = "|cffffcc00Cursive:|cffffaaaa 无法检测到SuperWoW.",
 		["|cffffcc00Cursive:|cffffaaaa Loaded.  /cursive for commands and minimap icon for options."] = "|cffffcc00Cursive:|cffffaaaa 已加载。/cursive 用于查看帮助命令，小地图图标打开设置选项.",
 
 		-- settings
@@ -288,7 +266,6 @@ L:RegisterTranslations("zhCN", function()
 		["Not Player Desc"] = "只显示非玩家单位",
 		["Hostile"] = "敌对",
 		["Attackable"] = "可攻击",
-		["Within 28 Range"] = "在28范围内",
 		["Within 45 Range"] = "在45范围内",
 		["Has Raid Mark"] = "有团队标记",
 		["Has Curse"] = "有诅咒",
@@ -322,7 +299,6 @@ L:RegisterTranslations("zhCN", function()
 		["This will show other player's Faerie Fires and avoid trying to cast Faerie Fire on those mobs"] = "这将显示其他玩家的精灵之火，并避免尝试在这些怪物上施放精灵之火",
 
 		-- spells
-		["Rank"] = "等级",
 		["Rank 1"] = "等级 1",
 		["Rank 2"] = "等级 2",
 		["Rank 3"] = "等级 3",

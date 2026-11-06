@@ -1,13 +1,21 @@
 Cursive.spells = Cursive.spells or {} -- spell tables, read by curses.lua
+-- Idol of the Black Morass (relic slot 18): Rip lasts 10% less
+local function hasMorassIdol()
+	return GetInventoryItemID("player", 18) == 61699
+end
+
 local function getRipDuration()
-	-- check if using black morass idol
-	local _, _, id = strfind(GetInventoryItemLink("player", 18) or "", "item:(%d+)")
-	if id == "61699" then
-		-- 10% less duration
+	if hasMorassIdol() then
 		return (8 + Cursive.curses.GetComboPointsUsed() * 2) * 0.9
 	end
 
 	return 8 + Cursive.curses.GetComboPointsUsed() * 2
+end
+
+-- ClassicAPI's built-in Turtle Rip duration may not include the idol, so with the idol
+-- equipped keep Cursive's own calculation instead of reading the aura's timer
+local function syncRip()
+	return not hasMorassIdol()
 end
 
 local L = AceLibrary("AceLocale-2.2"):new("Cursive")
@@ -65,12 +73,12 @@ function Cursive.spells.getDruidSpells()
 		[1824] = { name = L["rake"], rank = 3, duration = 9, variableDuration = true, meleeBleed=true },
 		[9904] = { name = L["rake"], rank = 4, duration = 9, variableDuration = true, meleeBleed=true },
 
-		[1079] = { name = L["rip"], rank = 1, duration = 8, calculateDuration = getRipDuration },
-		[9492] = { name = L["rip"], rank = 2, duration = 8, calculateDuration = getRipDuration },
-		[9493] = { name = L["rip"], rank = 3, duration = 8, calculateDuration = getRipDuration },
-		[9752] = { name = L["rip"], rank = 4, duration = 8, calculateDuration = getRipDuration },
-		[9894] = { name = L["rip"], rank = 5, duration = 8, calculateDuration = getRipDuration },
-		[9896] = { name = L["rip"], rank = 6, duration = 8, calculateDuration = getRipDuration },
+		[1079] = { name = L["rip"], rank = 1, duration = 8, calculateDuration = getRipDuration, syncAura = syncRip },
+		[9492] = { name = L["rip"], rank = 2, duration = 8, calculateDuration = getRipDuration, syncAura = syncRip },
+		[9493] = { name = L["rip"], rank = 3, duration = 8, calculateDuration = getRipDuration, syncAura = syncRip },
+		[9752] = { name = L["rip"], rank = 4, duration = 8, calculateDuration = getRipDuration, syncAura = syncRip },
+		[9894] = { name = L["rip"], rank = 5, duration = 8, calculateDuration = getRipDuration, syncAura = syncRip },
+		[9896] = { name = L["rip"], rank = 6, duration = 8, calculateDuration = getRipDuration, syncAura = syncRip },
 
 		[2908] = { name = L["soothe animal"], rank = 1, duration = 15 },
 		[8955] = { name = L["soothe animal"], rank = 2, duration = 15 },

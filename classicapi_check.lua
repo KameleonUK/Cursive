@@ -12,6 +12,8 @@ local REQUIRED = {
 	'C_Spell.CastAtUnit',
 	'C_Spell.GetSpellTexture',
 	'CombatLogGetCurrentEventInfo',
+	'C_UnitAuras.GetUnitAuraBySpellID',
+	'GetInventoryItemID',
 }
 
 local function resolve(path)

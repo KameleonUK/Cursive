@@ -28,7 +28,7 @@ function Cursive.spells.getPriestSpells()
 		[19284] = { name = L["hex of weakness"], rank = 5, duration = 120 },
 		[19285] = { name = L["hex of weakness"], rank = 6, duration = 120 },
 
-		[589] = { name = L["shadow word: pain"], rank = 1, duration = 24, variableDuration = true }, -- assume they have talent
+		[589] = { name = L["shadow word: pain"], rank = 1, duration = 24, variableDuration = true }, -- 24 assumes Improved SW:P; the real duration is read from the aura once it lands
 		[594] = { name = L["shadow word: pain"], rank = 2, duration = 24, variableDuration = true },
 		[970] = { name = L["shadow word: pain"], rank = 3, duration = 24, variableDuration = true },
 		[992] = { name = L["shadow word: pain"], rank = 4, duration = 24, variableDuration = true },

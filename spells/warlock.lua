@@ -48,14 +48,14 @@ function Cursive.spells.getWarlockSpells()
 
 		[18223] = { name = L["curse of exhaustion"], rank = 1, duration = 12 },
 
-		[348] = { name = L["immolate"], rank = 1, duration = 15 },
-		[707] = { name = L["immolate"], rank = 2, duration = 15 },
-		[1094] = { name = L["immolate"], rank = 3, duration = 15 },
-		[2941] = { name = L["immolate"], rank = 4, duration = 15 },
-		[11665] = { name = L["immolate"], rank = 5, duration = 15 },
-		[11667] = { name = L["immolate"], rank = 6, duration = 15 },
-		[11668] = { name = L["immolate"], rank = 7, duration = 15 },
-		[25309] = { name = L["immolate"], rank = 8, duration = 15 },
+		[348] = { name = L["immolate"], rank = 1, duration = 15, syncAura = true },
+		[707] = { name = L["immolate"], rank = 2, duration = 15, syncAura = true },
+		[1094] = { name = L["immolate"], rank = 3, duration = 15, syncAura = true },
+		[2941] = { name = L["immolate"], rank = 4, duration = 15, syncAura = true },
+		[11665] = { name = L["immolate"], rank = 5, duration = 15, syncAura = true },
+		[11667] = { name = L["immolate"], rank = 6, duration = 15, syncAura = true },
+		[11668] = { name = L["immolate"], rank = 7, duration = 15, syncAura = true },
+		[25309] = { name = L["immolate"], rank = 8, duration = 15, syncAura = true },
 
 		[6789] = { name = L["death coil"], rank = 1, duration = 3, travelTime = true },
 		[17925] = { name = L["death coil"], rank = 2, duration = 3, travelTime = true },
