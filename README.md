@@ -214,3 +214,26 @@ There is an option "always show current target" that will display your current t
 You can ignore mobs based on their unit name using the ignored mob list filter.  It is comma separated and you need to press enter to get it to save.  For example can do:
 `whelp,scarab` to ignore all mobs with those strings in their name.
 
+## ClassicAPI edition
+
+This build runs only with the [ClassicAPI](https://github.com/brues-code/ClassicAPI) DLL (plus Nampower). ClassicAPI loads
+`Cursive_ClassicAPI.toc`. A client without the DLL reads `Cursive.toc`, which only prints a message saying the DLL is
+needed and never touches your saved settings. If your ClassicAPI is too old, Cursive says which functions are missing
+and stays off.
+
+### Version history
+
+- **3.2.0**
+  - Fixed: Shackle Undead is treated as crowd control again, so commands don't break a priest's shackle.
+  - Fixed: the resist sound plays for the mob that resisted.
+  - Fixed: `priotarget` works with every priority, and the `HIGHEST_HP_*RAID_MARK*` priorities always prefer marked mobs.
+  - Fixed: `refreshtime` uses the exact time left, so it behaves the same with Decimal Duration on or off.
+  - Fixed: spell names with a rank, such as `Corruption (Rank 2)` or `Moonfire(Rank 10)`, match tracked debuffs.
+  - Fixed: options accept names with apostrophes or hyphens (`name=Kel'Thuzad`) and decimal times (`refreshtime=1.5`).
+  - Fixed: the Shared Faerie Fire setting takes effect without a reload, and the health bar border shows around the bar.
+  - New: range checks use the game's own spell range (target size and melee range included).
+  - New: casts go to the chosen mob whatever you have targeted, and commands return false when the cast is refused.
+  - New: debuffs that fade or are dispelled, and mobs that die, leave the display straight away (read from the combat log).
+  - New: Untagged mob filter.
+  - SuperWoW is no longer required.
+- **3.1.1** - last version before the ClassicAPI edition.
